@@ -1,771 +1,411 @@
-<title>Tabben-Planer de254</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DS TabBuddy</title>
+<meta name="description" content="Tabben-Planer für Die Stämme: Deff-Pakete exakt in die Lücken zwischen eingehende Angriffe legen und als Angriffsplan exportieren.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: Kriegstisch – links Eingaben & Strategie, rechts Lagebild und Plan; schmal untereinander */
+/* Layout: Kriegstisch. Desktop links Eingaben, rechts Ergebnis. Schmal: Daten → Ergebnis → Pakete → Einstellungen */
 :root{
-  --bg:#eceee9; --panel:#f7f8f4; --sunk:#e2e5de; --line:#c9cec3;
-  --fg:#1c2622; --muted:#5d6a63; --accent:#1f5f7a; --accent-ink:#ffffff;
-  --ok:#2f7d45; --ok-soft:#cfe6d4; --warn:#a86a10; --warn-soft:#f2dfbd;
-  --bad:#a63a2a; --bad-soft:#f0d2cc; --idle:#b9c0b6; --exist:#5a6fb0; --exist-soft:#d6dcf0;
+  --bg:#eceee9; --panel:#f8f9f5; --sunk:#e3e6df; --line:#cbd0c5;
+  --fg:#1c2622; --muted:#5b6861; --accent:#1f5f7a; --accent-ink:#ffffff; --accent-soft:#d5e4ea;
+  --ok:#2f7d45; --ok-soft:#d3e8d8; --warn:#9c620c; --warn-soft:#f3e2c2;
+  --bad:#a63a2a; --bad-soft:#f2d6d0; --idle:#b9c0b6; --exist:#4f64a8; --exist-soft:#dbe0f2;
   --f-display:"Alegreya SC", Georgia, serif;
   --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
-  --r:6px;
+  --r:6px; color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#141a18; --panel:#1b2320; --sunk:#111614; --line:#2e3a35;
-  --fg:#e3e8e2; --muted:#93a39a; --accent:#5fa9c6; --accent-ink:#0d1a20;
-  --ok:#6cc183; --ok-soft:#1f3a28; --warn:#e0a54a; --warn-soft:#3d2f17;
-  --bad:#e27a68; --bad-soft:#40211b; --idle:#46524c; --exist:#8fa3e3; --exist-soft:#252d48; color-scheme:dark}}
+  --bg:#131917; --panel:#1a221f; --sunk:#101513; --line:#2e3a35;
+  --fg:#e3e8e2; --muted:#94a49b; --accent:#62acc9; --accent-ink:#0b171c; --accent-soft:#1c3440;
+  --ok:#6cc183; --ok-soft:#1d3826; --warn:#e2a64b; --warn-soft:#3c2e16;
+  --bad:#e47d6b; --bad-soft:#41211b; --idle:#46524c; --exist:#94a7e6; --exist-soft:#252d48; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#141a18; --panel:#1b2320; --sunk:#111614; --line:#2e3a35;
-  --fg:#e3e8e2; --muted:#93a39a; --accent:#5fa9c6; --accent-ink:#0d1a20;
-  --ok:#6cc183; --ok-soft:#1f3a28; --warn:#e0a54a; --warn-soft:#3d2f17;
-  --bad:#e27a68; --bad-soft:#40211b; --idle:#46524c; --exist:#8fa3e3; --exist-soft:#252d48; color-scheme:dark}
+  --bg:#131917; --panel:#1a221f; --sunk:#101513; --line:#2e3a35;
+  --fg:#e3e8e2; --muted:#94a49b; --accent:#62acc9; --accent-ink:#0b171c; --accent-soft:#1c3440;
+  --ok:#6cc183; --ok-soft:#1d3826; --warn:#e2a64b; --warn-soft:#3c2e16;
+  --bad:#e47d6b; --bad-soft:#41211b; --idle:#46524c; --exist:#94a7e6; --exist-soft:#252d48; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
 body{background:var(--bg); color:var(--fg); font-family:var(--f-body); font-size:15px; line-height:1.45;
-  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:20px 48px}
-.wrap{max-width:1320px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
-header.top{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px 20px}
-h1{font-family:var(--f-display); font-weight:700; font-size:1.7rem; margin:0; letter-spacing:.01em; text-wrap:balance}
-h1 small{font-family:var(--f-mono); font-size:.75rem; font-weight:400; color:var(--muted); margin-left:8px; letter-spacing:0}
-h2{font-family:var(--f-display); font-weight:500; font-size:1.15rem; margin:0; text-wrap:balance}
-.lead{color:var(--muted); margin:0; max-width:70ch}
-.grid{display:grid; grid-template-columns:minmax(0, 420px) minmax(0, 1fr); gap:18px; align-items:start}
-@media (max-width:980px){.grid{grid-template-columns:minmax(0,1fr)}}
-.col{display:flex; flex-direction:column; gap:14px; min-width:0}
-.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0}
-.step{display:flex; align-items:baseline; gap:10px}
-.step b{font-family:var(--f-mono); font-size:.72rem; color:var(--accent-ink); background:var(--accent); border-radius:3px; padding:1px 6px}
-details.panel{gap:0}
-details.panel > summary{cursor:pointer; list-style:none; display:flex; align-items:baseline; gap:10px}
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:16px 48px}
+img{max-width:100%}
+.wrap{max-width:1360px; margin:0 auto; display:flex; flex-direction:column; gap:16px}
+h1,h2,h3{font-family:var(--f-display); margin:0; text-wrap:balance}
+h1{font-size:1.65rem; font-weight:700; letter-spacing:.01em}
+h2{font-size:1.12rem; font-weight:500}
+p{margin:0}
+a{color:var(--accent)}
+.muted{color:var(--muted)} .mono{font-family:var(--f-mono)} .small{font-size:.82rem}
+
+/* Kopf */
+header.top{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 24px; padding-bottom:12px; border-bottom:1px solid var(--line)}
+.brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.brand .tag{font-size:.9rem; color:var(--muted)}
+.worldbar{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap}
+.worldbar select{font-family:var(--f-mono); font-weight:600}
+.worldinfo{font-size:.8rem; color:var(--muted); font-family:var(--f-mono)}
+
+/* Raster */
+.grid{display:grid; gap:16px; align-items:start;
+  grid-template-columns:minmax(0, 450px) minmax(0, 1fr);
+  grid-template-areas:"data res" "pk res" "set res"}
+.a-data{grid-area:data} .a-pk{grid-area:pk} .a-set{grid-area:set} .a-res{grid-area:res}
+@media (max-width:1000px){.grid{grid-template-columns:minmax(0,1fr); grid-template-areas:"data" "res" "pk" "set"}}
+.stack{display:flex; flex-direction:column; gap:12px; min-width:0}
+
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:14px; display:flex; flex-direction:column; gap:12px; min-width:0}
+.panel-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap}
+details.panel{gap:0; padding:0}
+details.panel > summary{cursor:pointer; list-style:none; display:flex; align-items:baseline; gap:10px; padding:12px 14px}
 details.panel > summary::-webkit-details-marker{display:none}
 details.panel > summary::after{content:"＋"; margin-left:auto; color:var(--muted); font-family:var(--f-mono)}
 details.panel[open] > summary::after{content:"－"}
-details.panel[open] > summary{margin-bottom:10px}
+details.panel > .inner{padding:0 14px 14px}
 .inner{display:flex; flex-direction:column; gap:10px}
+details > summary.opt-sum{cursor:pointer; list-style:none; padding:8px 10px; border:1px dashed var(--line); border-radius:4px}
+details > summary.opt-sum::-webkit-details-marker{display:none}
+details > summary.opt-sum b::before{content:"▸ "; color:var(--muted)}
+details[open] > summary.opt-sum b::before{content:"▾ "}
+.sum-note{font-size:.8rem; color:var(--muted); font-family:var(--f-body)}
+
+/* Felder */
 label{font-size:.85rem; color:var(--muted); display:flex; flex-direction:column; gap:3px}
-.hint{font-size:.8rem; color:var(--muted); margin:0}
+.field{display:flex; flex-direction:column; gap:4px}
+.field-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap}
+.field-head label{font-size:.92rem; color:var(--fg); font-weight:700}
+.where{font-size:.78rem; color:var(--muted)}
+.hint{font-size:.8rem; color:var(--muted)}
 textarea, input, select{font:inherit; color:var(--fg); background:var(--sunk); border:1px solid var(--line); border-radius:4px; padding:6px 8px; min-width:0}
-textarea{font-family:var(--f-mono); font-size:.72rem; min-height:92px; resize:vertical; width:100%}
+textarea{font-family:var(--f-mono); font-size:.72rem; min-height:76px; resize:vertical; width:100%}
+textarea.big{min-height:96px}
 input[type=number]{font-family:var(--f-mono); font-size:.85rem; width:100%}
-input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+input[type=checkbox]{accent-color:var(--accent); width:16px; height:16px}
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible, a:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.check{flex-direction:row; align-items:center; gap:8px; color:var(--fg); font-size:.88rem}
+.fields{display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:8px}
 .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-.fields{display:grid; grid-template-columns:repeat(auto-fill, minmax(118px, 1fr)); gap:8px}
+.status{font-size:.8rem; font-family:var(--f-mono); min-height:1.2em}
+.status.ok{color:var(--ok)} .status.bad{color:var(--bad)} .status.idle{color:var(--muted)}
+
 button{font:inherit; font-weight:500; border-radius:4px; border:1px solid var(--line); background:var(--panel); color:var(--fg); padding:6px 12px; cursor:pointer}
 button:hover{border-color:var(--accent)}
-button.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:700; padding:9px 18px}
-button.ghost{background:transparent; padding:3px 8px; font-size:.85rem}
-.chip{display:inline-flex; align-items:center; gap:5px; font-size:.78rem; padding:1px 8px; border-radius:99px; background:var(--sunk); color:var(--muted); white-space:nowrap}
-.chip.ok{background:var(--ok-soft); color:var(--ok)} .chip.warn{background:var(--warn-soft); color:var(--warn)} .chip.bad{background:var(--bad-soft); color:var(--bad)} .chip.exist{background:var(--exist-soft); color:var(--exist)}
-.parsed{font-size:.8rem; color:var(--muted); font-family:var(--f-mono)}
-/* Presets */
-.preset{border:1px solid var(--line); border-radius:4px; padding:8px; display:flex; flex-direction:column; gap:6px; background:var(--panel)}
-.preset .head{display:flex; gap:6px; align-items:center}
-.preset .head input[type=text]{flex:1; font-weight:700}
-.preset .units{display:grid; grid-template-columns:repeat(auto-fill, minmax(66px,1fr)); gap:5px}
-.preset .units label{font-size:.72rem}
-.preset.off{opacity:.55}
+button.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:700}
+button.ghost{background:transparent; padding:3px 7px; font-size:.85rem; border-color:transparent; color:var(--muted)}
+button.ghost:hover{color:var(--fg); border-color:var(--line)}
+button:disabled{opacity:.4; cursor:default}
+
+/* Willkommen / leerer Zustand */
+.welcome{border-color:var(--accent); background:var(--accent-soft)}
+.steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; counter-reset:s}
+.steps li{display:grid; grid-template-columns:28px minmax(0,1fr); gap:10px; align-items:start; counter-increment:s}
+.steps li::before{content:counter(s); font-family:var(--f-mono); font-weight:600; font-size:.85rem; width:24px; height:24px; border-radius:50%;
+  display:grid; place-items:center; background:var(--sunk); color:var(--muted)}
+.steps li.done::before{content:"✓"; background:var(--ok-soft); color:var(--ok)}
+.steps b{display:block}
+.steps span{font-size:.85rem; color:var(--muted)}
+
+/* Einheiten-Icons */
+.u{width:18px; height:18px; vertical-align:-4px; image-rendering:auto}
+.pk{display:inline-flex; gap:8px; align-items:center; white-space:nowrap; font-family:var(--f-mono); font-size:.8rem}
+.pk span{display:inline-flex; align-items:center; gap:3px}
+
+/* Pakete */
+.ptable{border-collapse:collapse; width:100%; font-size:.85rem}
+.ptable th{font-weight:500; color:var(--muted); font-size:.75rem; padding:2px 3px; text-align:center}
+.ptable td{padding:2px}
+.ptable input[type=number]{-moz-appearance:textfield; appearance:textfield; padding:4px 4px; width:46px; min-width:44px; text-align:right; font-size:.8rem}
+.ptable input[type=text]{width:100%; min-width:86px; font-weight:700; padding:4px 6px; font-size:.85rem}
+.ptable .tools button{padding:2px 4px}
+.ptable input[type=number]::-webkit-inner-spin-button,.ptable input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none; margin:0}
+.ptable tr.off input[type=text], .ptable tr.off input[type=number]{opacity:.45}
+.ptable .tools{white-space:nowrap}
+
 /* Gewichte */
 .weight{display:grid; grid-template-columns:minmax(0,1fr) 120px 34px; gap:8px; align-items:center; font-size:.88rem}
 .weight output{font-family:var(--f-mono); font-size:.8rem; text-align:right}
 .weight input{accent-color:var(--accent)}
-.win{display:flex; gap:6px; align-items:center}
+.win{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
 .win input{width:auto}
+
 /* Ergebnis */
-.kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(130px,1fr)); gap:8px}
-.kpi{background:var(--sunk); border-radius:4px; padding:8px 10px}
-.kpi span{display:block; font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
-.kpi strong{font-family:var(--f-mono); font-size:1.3rem; font-variant-numeric:tabular-nums}
+.kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(118px,1fr)); gap:8px}
+.kpi{background:var(--sunk); border-radius:4px; padding:7px 10px}
+.kpi span{display:block; font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+.kpi strong{font-family:var(--f-mono); font-size:1.25rem; font-variant-numeric:tabular-nums}
+.kpi strong small{font-size:.75rem; color:var(--muted); font-weight:400}
+.actions{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.toast{font-size:.85rem; color:var(--ok); font-weight:500}
 .warnings{display:flex; flex-direction:column; gap:4px}
-.warnings p{margin:0; font-size:.85rem; color:var(--warn); background:var(--warn-soft); padding:5px 9px; border-radius:4px}
-.legend{display:flex; flex-wrap:wrap; gap:12px; font-size:.78rem; color:var(--muted)}
-.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px}
-.cov{display:flex; flex-direction:column; gap:6px}
-.covrow{display:grid; grid-template-columns:86px 120px minmax(0,1fr); gap:10px; align-items:center}
-@media (max-width:560px){.covrow{grid-template-columns:86px minmax(0,1fr)} .covrow .meta{display:none}}
+.warnings p{font-size:.85rem; color:var(--warn); background:var(--warn-soft); padding:5px 9px; border-radius:4px}
+.warnings p.bad{color:var(--bad); background:var(--bad-soft)}
+.tabs{display:flex; flex-wrap:wrap; gap:2px; border-bottom:1px solid var(--line)}
+.tabs button{border:none; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted); padding:6px 12px}
+.tabs button[aria-selected="true"]{color:var(--fg); border-bottom-color:var(--accent); font-weight:700}
+.tabs button .n{font-family:var(--f-mono); font-size:.75rem; color:var(--muted); margin-left:4px}
+
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:4px; max-height:70vh; overflow-y:auto}
+table.list{border-collapse:collapse; width:100%; font-size:.84rem}
+table.list th, table.list td{padding:5px 8px; text-align:left; white-space:nowrap; border-bottom:1px solid var(--line)}
+table.list th{font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:500; background:var(--sunk); position:sticky; top:0; z-index:1}
+td.t{font-family:var(--f-mono); font-variant-numeric:tabular-nums; font-size:.8rem}
+td.send{font-weight:600}
+.cd{display:block; font-family:var(--f-mono); font-size:.72rem; color:var(--muted); font-weight:400}
+tr.due-now td:first-child{box-shadow:inset 3px 0 0 var(--bad)} tr.due-soon td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+tr.due-now .cd{color:var(--bad); font-weight:600} tr.due-soon .cd{color:var(--warn)}
+tr.gone td{opacity:.45} tr.sent td{opacity:.45} tr.sent td.t.send{text-decoration:line-through}
+a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8rem; padding:3px 9px; border-radius:4px; background:var(--accent); color:var(--accent-ink)}
+.chip{display:inline-flex; align-items:center; gap:5px; font-size:.75rem; padding:1px 8px; border-radius:99px; background:var(--sunk); color:var(--muted); white-space:nowrap}
+.chip.ok{background:var(--ok-soft); color:var(--ok)} .chip.warn{background:var(--warn-soft); color:var(--warn)} .chip.bad{background:var(--bad-soft); color:var(--bad)} .chip.exist{background:var(--exist-soft); color:var(--exist)}
+
+.legend{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.78rem; color:var(--muted)}
+.legend i{display:inline-block; width:10px; height:12px; border-radius:2px; margin-right:4px; vertical-align:-1px}
+.cov{display:flex; flex-direction:column}
+.covrow{display:grid; grid-template-columns:84px 150px minmax(0,1fr); gap:10px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line)}
+.covrow:last-child{border-bottom:none}
+@media (max-width:560px){.covrow{grid-template-columns:78px minmax(0,1fr)} .covrow .strip{grid-column:1 / -1}}
 .covrow .c{font-family:var(--f-mono); font-size:.85rem; font-weight:600}
-.covrow .meta{font-size:.75rem; color:var(--muted); line-height:1.2}
+.covrow .meta{font-size:.76rem; color:var(--muted); line-height:1.35; display:flex; flex-direction:column; gap:2px; align-items:flex-start}
 .strip{display:flex; flex-wrap:wrap; gap:2px; align-items:center}
-.strip i{width:12px; height:16px; border-radius:2px; background:var(--idle)}
+.strip i{width:12px; height:18px; border-radius:2px; background:var(--idle)}
 .strip i.wave{width:2px; background:transparent; border-left:2px dotted var(--line); margin:0 3px}
 .s-tab{background:var(--ok)!important} .s-existing{background:var(--exist)!important} .s-nopkg{background:var(--warn)!important}
-.s-bunker{background:var(--exist)!important; opacity:.35}
-.s-window{background:var(--warn)!important; opacity:.55} .s-unreachable{background:var(--bad)!important; opacity:.75} .s-past,.s-invalid{background:var(--idle)!important; opacity:.5}
-.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:4px}
-table{border-collapse:collapse; width:100%; font-size:.84rem}
-th, td{padding:5px 8px; text-align:left; white-space:nowrap; border-bottom:1px solid var(--line)}
-th{font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:500; background:var(--sunk); position:sticky; top:0}
-td.num, td.t{font-family:var(--f-mono); font-variant-numeric:tabular-nums; font-size:.8rem}
-tr.due-now td:first-child{box-shadow:inset 3px 0 0 var(--bad)} tr.due-soon td:first-child{box-shadow:inset 3px 0 0 var(--warn)} tr.gone{opacity:.45}
-.cd{font-family:var(--f-mono); font-size:.75rem; color:var(--muted); margin-left:6px}
-tr.due-now .cd{color:var(--bad); font-weight:600} tr.due-soon .cd{color:var(--warn)}
-a{color:var(--accent)}
-.tabs{display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid var(--line)}
-.tabs button{border:none; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted); padding:6px 10px}
-.tabs button[aria-selected="true"]{color:var(--fg); border-bottom-color:var(--accent); font-weight:700}
-#exportText{min-height:200px}
-.worldpick{flex-direction:row; align-items:center; gap:6px; font-size:.9rem; color:var(--fg)}
-.worldpick select{font-family:var(--f-mono); font-weight:600}
-.welcome{border-color:var(--accent); background:var(--exist-soft)}
-.welcome h2{color:var(--fg)}
-.welcome .row select{min-width:220px}
-.banner{font-size:.85rem; background:var(--exist-soft); color:var(--exist); padding:6px 10px; border-radius:4px; margin:0}
-input[type=file]{font-size:.8rem; padding:4px}
-.empty{color:var(--muted); font-size:.9rem; margin:0}
-.pk{font-family:var(--f-mono); font-size:.78rem}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.s-window{background:var(--warn)!important; opacity:.5} .s-unreachable{background:var(--bad)!important; opacity:.75}
+.s-past,.s-invalid{background:var(--idle)!important; opacity:.5} .s-bunker{background:var(--exist)!important; opacity:.3}
+.exportbox textarea{min-height:200px}
+.empty-row{color:var(--muted); font-size:.9rem; padding:12px}
+@media (max-width:640px){
+  #planTable thead{display:none}
+  #planTable, #planTable tbody{display:block}
+  #planTable tr{display:flex; flex-wrap:wrap; align-items:center; gap:2px 8px; padding:8px 8px; border-bottom:1px solid var(--line)}
+  #planTable td{border:none; padding:0}
+  #planTable td.c-chk{flex:0 0 22px}
+  #planTable td.c-send{flex:1 1 calc(100% - 140px)}
+  #planTable td.c-go{flex:0 0 auto; order:2}
+  #planTable td.c-chk{order:0} #planTable td.c-send{order:1} #planTable td.c-from{order:3} #planTable td.c-to{order:4} #planTable td.c-arr{order:5} #planTable td.c-pk{order:6}
+  #planTable td.c-from{flex:0 0 auto; margin-left:30px}
+  #planTable td.c-to::before{content:"→ "; color:var(--muted)}
+  #planTable td.c-arr::before{content:"an "; color:var(--muted); font-family:var(--f-body)}
+  #planTable td.c-pk{flex:1 0 100%; margin-left:30px}
+  #planTable td.c-run{display:none}
+  #planTable tr.due-now, #planTable tr.due-soon{box-shadow:inset 3px 0 0 var(--warn)} #planTable tr.due-now{box-shadow:inset 3px 0 0 var(--bad)}
+  #planTable tr td:first-child{box-shadow:none!important}
+  .tablewrap{max-height:none}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important; scroll-behavior:auto!important}}
 </style>
-
+</head>
+<body>
 <div class="wrap">
   <header class="top">
-    <div>
-      <h1>Tabben-Planer <small id="worldTag">v2</small></h1>
-      <p class="lead">Kleine Deff-Pakete exakt in die Lücken zwischen eingehenden Angriffen legen, um Kattasplits abzufangen.</p>
-      <p class="parsed" id="worldInfo"></p>
-    </div>
-    <div class="row">
-      <label class="worldpick" for="worldSel" id="worldPick" hidden>Welt <select id="worldSel"></select></label>
-      <button id="btnDemo" type="button">Testdaten 02.08. laden</button>
-      <button id="btnCalc" class="primary" type="button">Berechnen</button>
+    <div class="brand"><h1>DS TabBuddy</h1><span class="tag">Tabben-Planer für Die Stämme</span></div>
+    <div class="worldbar">
+      <label for="worldSel" class="check" id="worldPick" hidden>Welt <select id="worldSel"></select></label>
+      <span class="worldinfo" id="worldInfo"></span>
     </div>
   </header>
 
   <section class="panel welcome" id="welcome" hidden>
-    <h2>Welt wählen</h2>
-    <p class="hint">Laufzeiten, Einheiten, Deffwerte und Dorf-IDs werden für die gewählte Welt automatisch geladen. Die Auswahl wird gespeichert und steht danach oben rechts.</p>
-    <div class="row"><select id="worldFirst" aria-label="Welt"></select><button id="btnWorldFirst" class="primary" type="button">Welt übernehmen</button></div>
+    <h2>Auf welcher Welt spielst du?</h2>
+    <p class="hint">Laufzeiten, Einheiten, Millisekunden und Dorf-IDs stellen sich danach automatisch ein. Die Wahl wird gespeichert.</p>
+    <div class="row"><select id="worldFirst" aria-label="Welt"></select><button id="btnWorldFirst" class="primary" type="button">Los</button></div>
   </section>
 
-  <div class="grid">
-    <!-- Linke Spalte: Eingaben -->
-    <div class="col">
-      <section class="panel">
-        <div class="step"><b>1</b><h2>Lage einlesen</h2></div>
-        <label for="inSos">Eingehende Angriffsübersicht (BB-Code)
-          <textarea id="inSos" spellcheck="false" placeholder="[b]Dorf:[/b] [coord]489|532[/coord] …"></textarea></label>
-        <div class="parsed" id="psSos">–</div>
-        <label for="inTroops">Truppenübersicht (ganze Seite kopieren)
-          <textarea id="inTroops" spellcheck="false" placeholder="-=01=- (461|598) K54  eigene  98 100 …  Befehle"></textarea></label>
-        <div class="parsed" id="psTroops">–</div>
-        <label for="inOut">Laufende Unterstützungen, optional (Übersichten → Befehle → Unterstützung, ganze Seite)
-          <textarea id="inOut" spellcheck="false" style="min-height:64px" placeholder="Unterstützung für … (489|532) K54   001 … (461|598) K54   morgen um 05:15:33   200 200 0 …"></textarea></label>
-        <div class="parsed" id="psOut">–</div>
-        <label for="inPlan">Bestehender DS-Ultimate-Plan, optional (Export-Zeilen)
-          <textarea id="inPlan" spellcheck="false" placeholder="16442&amp;885&amp;heavy&amp;1785746505000&amp;6&amp;false&amp;false&amp;spear=/…"></textarea></label>
-        <p class="hint">Lücken mit laufender Unterstützung oder einem Plan-Eintrag gelten als abgedeckt. Laufende Befehle zeigen, was schon raus ist; der Plan deckt ab, was noch nicht abgeschickt wurde (diese Truppen gelten als verplant). Der Export enthält nur neue Zeilen.</p>
-        <div class="parsed" id="psPlan">–</div>
-        <div class="parsed" id="psIds">Dorf-IDs: –</div>
-      </section>
-
-      <section class="panel">
-        <div class="step"><b>2</b><h2>Pakete</h2></div>
-        <p class="hint">Truppen (Zeile „eigene“) werden pro Dorf reihum in diese Pakete aufgeteilt, in der angezeigten Reihenfolge.</p>
-        <div id="presetList" class="inner"></div>
-        <div class="row">
-          <button id="btnAddPreset" type="button">Paket hinzufügen</button>
-          <button id="btnResetPresets" type="button" class="ghost">Standard wiederherstellen</button>
+  <main class="grid">
+    <!-- Daten -->
+    <section class="panel a-data" id="pnlData">
+      <h2>Daten aus dem Spiel</h2>
+      <div class="field">
+        <div class="field-head"><label for="inSos">SOS-Anfrage</label><span class="where">BB-Code mit [b]Dorf:[/b] … Ankunftszeit</span></div>
+        <textarea id="inSos" class="big" spellcheck="false" placeholder="[b]Dorf:[/b] [coord]489|532[/coord]&#10;[b]Wallstufe:[/b] 20&#10;[b]Verteidiger:[/b] 964 962 0 …&#10;[command]attack[/command] Ramme … Ankunftszeit: 03.08.26 07:54:23 …"></textarea>
+        <p class="status idle" id="psSos">Noch leer</p>
+      </div>
+      <div class="field">
+        <div class="field-head"><label for="inTroops">Truppenübersicht</label><span class="where">Übersichten → Truppen, ganze Seite (Strg+A, Strg+C)</span></div>
+        <textarea id="inTroops" class="big" spellcheck="false" placeholder="-=01=- (461|598) K54   eigene   98 100 4110 …   Befehle&#10;im Dorf   …"></textarea>
+        <p class="status idle" id="psTroops">Noch leer</p>
+      </div>
+      <details id="detOptional">
+        <summary class="field-head opt-sum"><b>Schon unterwegs oder geplant</b><span class="where">optional · verhindert doppelte Tabs <span id="optState"></span></span></summary>
+        <div class="inner" style="margin-top:10px">
+          <div class="field">
+            <div class="field-head"><label for="inOut">Laufende Unterstützungen</label><span class="where">Übersichten → Befehle → Unterstützung, ganze Seite</span></div>
+            <textarea id="inOut" spellcheck="false" placeholder="Unterstützung für … (489|532) K54   001 … (461|598) K54   morgen um 05:15:33   200 200 0 …"></textarea>
+            <p class="status idle" id="psOut"></p>
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="inPlan">DS-Ultimate-Angriffsplan</label><span class="where">Export-Zeilen deines AP</span></div>
+            <textarea id="inPlan" spellcheck="false" placeholder="16442&amp;885&amp;heavy&amp;1785746505000&amp;6&amp;false&amp;false&amp;spear=/…"></textarea>
+            <p class="status idle" id="psPlan"></p>
+          </div>
+          <p class="hint">Lücken mit einer laufenden UT oder einem AP-Eintrag gelten als abgedeckt. Truppen aus noch nicht abgeschickten AP-Einträgen gelten als verplant. Der Export enthält dann nur neue Befehle.</p>
         </div>
-        <label for="sReserve">Reserve je Dorf in % (bleibt für spätere Incs stehen)
-          <input id="sReserve" type="number" min="0" max="95" step="5" data-k="reservePct"></label>
-        <label class="row" style="flex-direction:row; gap:6px" for="sExcl"><input id="sExcl" type="checkbox" data-k="excludeAttacked"> Angegriffene Dörfer nicht als Quelle nutzen</label>
+      </details>
+      <p class="status idle" id="psIds"></p>
+    </section>
+
+    <!-- Ergebnis -->
+    <div class="a-res stack">
+      <section class="panel" id="empty">
+        <h2>So geht's</h2>
+        <ol class="steps" id="steps">
+          <li id="stWorld"><div><b>Welt wählen</b><span>Laufzeiten, Einheiten und Dorf-IDs kommen danach automatisch. Wechseln geht jederzeit oben rechts.</span></div></li>
+          <li id="stSos"><div><b>SOS-Anfrage einfügen</b><span>Den BB-Code der angegriffenen Dörfer, so wie du ihn ins Forum posten würdest.</span></div></li>
+          <li id="stTroops"><div><b>Truppenübersicht einfügen</b><span>Übersichten → Truppen, ganze Seite markieren und kopieren. Gelesen wird die Zeile „eigene“, Fremddeff bleibt also stehen.</span></div></li>
+          <li id="stDone"><div><b>Plan prüfen und in DS-Ultimate importieren</b><span>Das Tool rechnet sofort. „AP-Import kopieren“ und im Angriffsplaner importieren, oder direkt über die Versammlungsplatz-Links abschicken.</span></div></li>
+        </ol>
       </section>
 
-      <details class="panel" id="detStrategy" open>
-        <summary><span class="step"><b>3</b><h2>Strategie</h2></span></summary>
+      <section class="panel" id="result" hidden>
+        <div class="panel-head"><h2>Tabplan</h2><span class="small muted mono" id="stamp"></span></div>
+        <div class="kpis" id="kpis"></div>
+        <div class="actions">
+          <button class="primary" type="button" id="cpDs">AP-Import kopieren</button>
+          <button type="button" id="cpOpen">Offene Lücken fürs Forum</button>
+          <button type="button" id="cpFull">Tabliste fürs Forum</button>
+          <span class="toast" id="toast" role="status" aria-live="polite"></span>
+        </div>
+        <div class="warnings" id="warnings"></div>
+        <div class="tabs" role="tablist" id="resTabs">
+          <button type="button" role="tab" data-t="plan" aria-selected="true">Abschickplan<span class="n" id="nPlan"></span></button>
+          <button type="button" role="tab" data-t="cov" aria-selected="false">Dörfer<span class="n" id="nCov"></span></button>
+          <button type="button" role="tab" data-t="pk" aria-selected="false">Pakete<span class="n" id="nPk"></span></button>
+          <button type="button" role="tab" data-t="txt" aria-selected="false">Texte</button>
+        </div>
+
+        <div data-pane="plan" class="inner">
+          <div class="row" style="justify-content:space-between">
+            <label class="check" for="hideSent"><input type="checkbox" id="hideSent"> Abgeschickte ausblenden</label>
+            <span class="small muted" id="sentInfo"></span>
+          </div>
+          <div class="tablewrap"><table class="list" id="planTable">
+            <thead><tr><th title="abgeschickt">✓</th><th>Abschicken</th><th>Von</th><th>Nach</th><th>Ankunft</th><th>Paket</th><th>Laufzeit</th><th>Platz</th></tr></thead>
+            <tbody></tbody></table></div>
+        </div>
+
+        <div data-pane="cov" class="inner" hidden>
+          <div class="legend">
+            <span><i class="s-tab"></i>neu getabbt</span><span><i class="s-existing"></i>unterwegs / im AP</span>
+            <span><i class="s-nopkg"></i>Pakete aufgebraucht</span><span><i class="s-window"></i>nur ausserhalb deiner Zeiten</span>
+            <span><i class="s-unreachable"></i>kein Dorf rechtzeitig</span><span><i class="s-past"></i>vorbei</span><span><i class="s-bunker"></i>Bunker</span>
+          </div>
+          <div class="cov" id="coverage"></div>
+        </div>
+
+        <div data-pane="pk" class="inner" hidden>
+          <p class="hint">So wurden deine Truppen (Zeile „eigene“) auf die Pakete aufgeteilt, und wie viele davon der Plan nutzt.</p>
+          <div class="tablewrap"><table class="list" id="pkTable"><thead></thead><tbody></tbody></table></div>
+        </div>
+
+        <div data-pane="txt" class="inner exportbox" hidden>
+          <div class="row">
+            <select id="txtSel" aria-label="Text wählen">
+              <option value="ds">AP-Import (DS-Ultimate)</option><option value="open">Offene Lücken (BB-Code)</option>
+              <option value="full">Tabliste (BB-Code)</option><option value="pk">Paketaufteilung</option></select>
+            <button type="button" id="cpTxt">Kopieren</button>
+          </div>
+          <textarea id="txtOut" spellcheck="false" readonly aria-label="Exporttext"></textarea>
+        </div>
+      </section>
+    </div>
+
+    <!-- Pakete -->
+    <section class="panel a-pk" id="pnlPk">
+      <div class="panel-head"><h2>Pakete</h2><span class="hint">Reihenfolge = Priorität beim Aufteilen</span></div>
+      <div style="overflow-x:auto"><table class="ptable" id="presetTable"></table></div>
+      <div class="row">
+        <button id="btnAddPreset" type="button">Paket hinzufügen</button>
+        <button id="btnResetPresets" type="button" class="ghost">Standard</button>
+      </div>
+      <div class="fields">
+        <label for="sReserve">Reserve je Dorf in %<input id="sReserve" type="number" min="0" max="95" step="5" data-k="reservePct"></label>
+      </div>
+      <label class="check" for="sExcl"><input id="sExcl" type="checkbox" data-k="excludeAttacked"> Angegriffene Dörfer nicht als Quelle</label>
+    </section>
+
+    <!-- Einstellungen -->
+    <div class="a-set stack">
+      <section class="panel" id="pnlTimes">
+        <div class="panel-head"><h2>Abschickzeiten</h2><span class="hint">Wann bist du online?</span></div>
+        <div id="winList" class="inner"></div>
+        <div class="row">
+          <button id="btnAddWin" type="button">Zeitfenster hinzufügen</button>
+          <label for="sBuf" class="check">Puffer <input id="sBuf" type="number" min="0" style="width:64px" data-k="windowBufferMin"> Min.</label>
+        </div>
+      </section>
+
+      <details class="panel" id="detPrio">
+        <summary><h2>Priorisierung</h2><span class="sum-note">welche Lücken zuerst</span></summary>
         <div class="inner">
-          <p class="hint">Welche Lücken zuerst? Jede Lücke bekommt einen Wert, die Zuteilung maximiert die Summe über alle Pakete.</p>
+          <p class="hint">Jede Lücke bekommt einen Wert. Der Plan holt die grösste Summe über alle Pakete heraus.</p>
           <div class="weight"><span>Viele Incs aufs Dorf</span><input id="wCount" type="range" min="0" max="3" step="0.25" data-k="wCount"><output for="wCount"></output></div>
           <div class="weight"><span>Kurze Lücke</span><input id="wShort" type="range" min="0" max="3" step="0.25" data-k="wShort"><output for="wShort"></output></div>
-          <div class="weight"><span>Mitte der Welle</span><input id="wCenter" type="range" min="0" max="3" step="0.25" data-k="wCenter"><output for="wCenter"></output></div>
-          <div class="weight"><span>Schwache Verteidigung</span><input id="wWeak" type="range" min="0" max="3" step="0.25" data-k="wWeak"><output for="wWeak"></output></div>
+          <div class="weight"><span>Mitte der Welle (Splits)</span><input id="wCenter" type="range" min="0" max="3" step="0.25" data-k="wCenter"><output for="wCenter"></output></div>
+          <div class="weight"><span>Schwache Deff im Dorf</span><input id="wWeak" type="range" min="0" max="3" step="0.25" data-k="wWeak"><output for="wWeak"></output></div>
           <div class="weight"><span>Jedes Dorf mind. 1 Tab</span><input id="wSpread" type="range" min="0" max="5" step="0.5" data-k="wSpread"><output for="wSpread"></output></div>
-          <label class="row" style="flex-direction:row; gap:6px; align-items:center" for="sBunker"><input id="sBunker" type="checkbox" data-k="skipBunker"> Bunker nicht tabben ab</label>
-          <label for="sBunkerMin">fremden Deff-Einheiten (Speer + Schwert + SKav im Dorf minus eigene)
+          <label class="check" for="sBunker"><input id="sBunker" type="checkbox" data-k="skipBunker"> Bunker nicht tabben</label>
+          <label for="sBunkerMin">Bunker ab so viel Fremddeff (Speer + Schwert + Bogen + SKav)
             <input id="sBunkerMin" type="number" min="0" step="500" data-k="bunkerMin"></label>
-          <p class="hint">Faktor nach Einheit des nächsten Incs (laut Befehlsname):</p>
+          <p class="hint">Faktor nach Befehlsname des nächsten Incs:</p>
           <div class="fields">
             <label for="uwAg">AG<input id="uwAg" type="number" step="0.1" min="0" data-uw="ag"></label>
-            <label for="uwKata">Katapult<input id="uwKata" type="number" step="0.1" min="0" data-uw="kata"></label>
+            <label for="uwKata">Kata<input id="uwKata" type="number" step="0.1" min="0" data-uw="kata"></label>
             <label for="uwRamme">Ramme<input id="uwRamme" type="number" step="0.1" min="0" data-uw="ramme"></label>
             <label for="uwSpy">Späher<input id="uwSpy" type="number" step="0.1" min="0" data-uw="spaeher"></label>
             <label for="uwOther">Sonstige<input id="uwOther" type="number" step="0.1" min="0" data-uw="other"></label>
           </div>
-          <label for="sThreats">Bedrohungsliste aus Berichten: Spieler oder Herkunftsdorf, optional =Faktor (Standard 2)
-            <textarea id="sThreats" spellcheck="false" style="min-height:64px" data-k="threats" placeholder="DobbyFreeElf=2&#10;565|546=3"></textarea></label>
+          <label for="sThreats">Bekannte Offs/Splitter aus Berichten: Spieler oder Herkunftsdorf, optional =Faktor (Standard 2)
+            <textarea id="sThreats" spellcheck="false" style="min-height:60px" data-k="threats" placeholder="DobbyFreeElf=2&#10;565|546=3"></textarea></label>
         </div>
       </details>
 
       <details class="panel" id="detLimits">
-        <summary><span class="step"><b>4</b><h2>Limits &amp; Zeiten</h2></span></summary>
+        <summary><h2>Limits &amp; Timing</h2><span class="sum-note">Wellen, Landung, Obergrenzen</span></summary>
         <div class="inner">
           <div class="fields">
             <label for="sMaxV">Max. Tabs je Dorf (0 = ∞)<input id="sMaxV" type="number" min="0" data-k="maxPerVillage"></label>
             <label for="sMaxT">Max. Tabs gesamt (0 = ∞)<input id="sMaxT" type="number" min="0" data-k="maxTotal"></label>
-            <label for="sMaxH">Max. Laufzeit h (0 = ∞)<input id="sMaxH" type="number" min="0" step="0.5" data-k="maxTravelH"></label>
+            <label for="sMaxH">Max. Laufzeit in h (0 = ∞)<input id="sMaxH" type="number" min="0" step="0.5" data-k="maxTravelH"></label>
             <label for="sLead">Vorlauf in Min.<input id="sLead" type="number" min="0" data-k="leadMin"></label>
             <label for="sWave">Neue Welle ab Pause (Min.)<input id="sWave" type="number" min="1" data-k="waveBreakMin"></label>
             <label for="sMinGap">Min. Lücke (s)<input id="sMinGap" type="number" min="0" data-k="minGapSec"></label>
             <label for="sLand">Landung + s nach Inc<input id="sLand" type="number" min="0" data-k="landOffsetSec"></label>
           </div>
           <p class="hint" id="landHint"></p>
-          <p class="hint">Abschickfenster (täglich). Fenster über Mitternacht in einer Zeile, z.&nbsp;B. 20:45–01:00. Keine Zeile = jederzeit.</p>
-          <div id="winList" class="inner"></div>
-          <div class="row">
-            <button id="btnAddWin" type="button">Fenster hinzufügen</button>
-            <label for="sBuf" style="flex-direction:row; align-items:center; gap:6px">Puffer Min. <input id="sBuf" type="number" min="0" style="width:70px" data-k="windowBufferMin"></label>
-          </div>
-          <label for="sNow">Referenzzeit (leer = automatisch)
-            <input id="sNow" type="datetime-local" step="1"></label>
-          <p class="hint" id="nowInfo"></p>
+          <label for="sNow">Referenzzeit (leer = jetzt)<input id="sNow" type="datetime-local" step="1"></label>
         </div>
       </details>
 
       <details class="panel" id="detWorld">
-        <summary><span class="step"><b>5</b><h2>Welt &amp; Export</h2></span></summary>
-        <p class="hint" id="manualHint">Wird automatisch aus der gewählten Welt befüllt. Nur ändern, wenn keine Weltdaten verfügbar sind.</p>
+        <summary><h2>Welt &amp; Export</h2><span class="sum-note">manuell, Dorf-IDs, teilen</span></summary>
         <div class="inner">
+          <p class="hint" id="manualHint">Wird aus der gewählten Welt befüllt. Nur ändern, wenn keine Weltdaten da sind.</p>
           <div class="fields">
             <label for="sWorld">Welt<input id="sWorld" type="text" data-k="world"></label>
             <label for="sUnit">Einheitengeschw.<input id="sUnit" type="number" step="0.01" data-k="unitSpeed"></label>
             <label for="sSpeed">Spielgeschw.<input id="sSpeed" type="number" step="0.01" data-k="worldSpeed"></label>
-            <label for="sType">AP-Typ<select id="sType" data-k="typeCode">
-              <option value="5">5 Unterstützung</option><option value="6">6 Stand Unterstützung</option>
-              <option value="7">7 Schnelle Unterstützung</option><option value="8">8 Fake Unterstützung</option></select></label>
+            <label for="sType">AP-Befehlstyp<select id="sType" data-k="typeCode">
+              <option value="5">Unterstützung</option><option value="6">Stand Unterstützung</option>
+              <option value="7">Schnelle Unterstützung</option><option value="8">Fake Unterstützung</option></select></label>
           </div>
-          <p class="hint">Minuten pro Feld (bei Weltdaten bereits umgerechnet, Faktoren dann 1):</p>
+          <p class="hint">Minuten pro Feld (mit Weltdaten bereits umgerechnet, Faktoren dann 1):</p>
           <div class="fields" id="speedFields"></div>
           <p class="hint" id="speedInfo"></p>
-          <label for="fileVillage">Dorfliste der Welt (village.txt von <span id="vtUrl">…/map/village.txt</span>)
-            <input id="fileVillage" type="file" accept=".txt,text/plain"></label>
-          <p class="hint" id="idInfo">Wird im Browser gespeichert. Auf dem eigenen Server lädt das Tool die Datei automatisch.</p>
-          <label for="inIds">Einzelne Dorf-IDs ergänzen (x|y=id)
-            <textarea id="inIds" spellcheck="false" style="min-height:52px" placeholder="489|532=885"></textarea></label>
-          <label for="inShare">Einstellungen teilen (für Dualis)
-            <textarea id="inShare" spellcheck="false" style="min-height:52px" placeholder="Hier den Einstellungs-Text einfügen"></textarea></label>
-          <div class="row"><button id="btnShareOut" type="button">Meine Einstellungen als Text</button><button id="btnShareIn" type="button">Text übernehmen</button><span class="parsed" id="shareInfo"></span></div>
+          <label for="fileVillage">village.txt hochladen (nur ohne Weltdaten nötig)<input id="fileVillage" type="file" accept=".txt,text/plain"></label>
+          <label for="inIds">Einzelne Dorf-IDs ergänzen (x|y=id)<textarea id="inIds" spellcheck="false" style="min-height:48px" placeholder="489|532=885"></textarea></label>
+          <label for="inShare">Einstellungen teilen (Pakete, Zeiten, Priorisierung)<textarea id="inShare" spellcheck="false" style="min-height:48px" placeholder="Text eines Dualis hier einfügen"></textarea></label>
+          <div class="row"><button id="btnShareOut" type="button">Meine Einstellungen kopieren</button><button id="btnShareIn" type="button">Eingefügten Text übernehmen</button><span class="small muted" id="shareInfo"></span></div>
         </div>
       </details>
     </div>
-
-    <!-- Rechte Spalte: Ergebnis -->
-    <div class="col">
-      <section class="panel" id="resultPanel">
-        <div class="step"><h2>Lagebild</h2><span class="parsed" id="stamp"></span></div>
-        <div class="kpis" id="kpis"></div>
-        <p class="banner" id="demoBanner" hidden>Testdaten vom 02.08. (Welt de254, eigene Weltwerte und IDs). Eigene Daten einfügen beendet den Testmodus.</p>
-        <div class="warnings" id="warnings"></div>
-        <div class="legend">
-          <span><i class="s-tab"></i>neu getabbt</span><span><i class="s-existing"></i>schon unterwegs oder im Plan</span>
-          <span><i class="s-nopkg"></i>erreichbar, Pakete aufgebraucht</span><span><i class="s-window"></i>nur ausserhalb Zeitfenster</span>
-          <span><i class="s-unreachable"></i>kein Dorf erreicht es</span><span><i class="s-past"></i>vorbei / zu knapp</span><span><i class="s-bunker"></i>Bunker, nicht getabbt</span>
-        </div>
-        <div class="cov" id="coverage"><p class="empty">Noch keine Berechnung. Daten einfügen oder Testdaten laden.</p></div>
-      </section>
-
-      <section class="panel">
-        <div class="step"><h2>Abschickplan</h2><span class="parsed" id="planInfo"></span></div>
-        <div class="tablewrap"><table id="planTable">
-          <thead><tr><th>Abschicken</th><th>Von</th><th>Nach</th><th>Ankunft</th><th>Paket</th><th>Laufzeit</th><th>Wert</th><th>Platz</th></tr></thead>
-          <tbody></tbody></table></div>
-      </section>
-
-      <section class="panel">
-        <div class="step"><h2>Export</h2></div>
-        <div class="tabs" role="tablist" id="exportTabs">
-          <button type="button" role="tab" data-x="ds" aria-selected="true">DS-Ultimate</button>
-          <button type="button" role="tab" data-x="open" aria-selected="false">Offene Lücken (Team)</button>
-          <button type="button" role="tab" data-x="full" aria-selected="false">Tabliste (Forum)</button>
-          <button type="button" role="tab" data-x="pk" aria-selected="false">Pakete</button>
-        </div>
-        <p class="hint" id="exportHint"></p>
-        <textarea id="exportText" spellcheck="false" readonly></textarea>
-        <div class="row"><button id="btnCopy" type="button">Kopieren</button><span class="parsed" id="copyInfo"></span></div>
-      </section>
-
-      <section class="panel">
-        <div class="step"><h2>Pakete je Dorf</h2></div>
-        <div class="tablewrap"><table id="pkTable"><thead></thead><tbody></tbody></table></div>
-      </section>
-    </div>
-  </div>
+  </main>
 </div>
 
-<script type="text/plain" id="demoIds">491|530=7
-485|531=65
-482|522=97
-455|523=292
-486|532=398
-483|535=424
-489|530=446
-489|532=885
-490|531=1263
-488|533=1284
-488|532=1637
-494|525=1982
-489|531=2433
-482|545=2724
-493|525=3970
-477|551=4482
-478|550=4763
-457|568=6689
-447|573=8603
-476|593=9695
-459|591=9812
-458|586=9880
-457|590=10149
-451|581=10160
-450|588=10165
-457|592=10169
-461|598=10183
-443|579=10412
-451|575=10540
-443|581=10762
-444|588=10850
-443|580=11533
-453|595=11857
-449|595=12676
-449|600=13024
-461|604=13872
-443|601=15261
-438|598=15853
-441|602=16172
-457|609=16348
-440|603=16442
-446|607=16464
-454|586=20487</script>
-<script type="text/plain" id="demoSos">[b]Dorf:[/b] [coord]491|530[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  49  49  1  0  0  0  1  0  0 
-
-    [command]attack[/command] Ramme | return 04.08 18:49:38 | sent 31.07 18:38:24 [coord]485|626[/coord] --> Ankunftszeit: 02.08.26 18:44:01 [player]Sammyt[/player]
-    [command]attack[/command] Ramme | return 04.08 17:23:06 | sent 01.08 22:46:54 [coord]541|574[/coord] --> Ankunftszeit: 03.08.26 08:05:00 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 04.08 17:16:49 | sent 01.08 22:54:37 [coord]484|596[/coord] --> Ankunftszeit: 03.08.26 08:05:43 [player]Zudoda[/player]
-    [command]attack[/command] Ramme | return 04.08 18:17:03 | sent 01.08 22:06:03 [coord]559|535[/coord] --> Ankunftszeit: 03.08.26 08:11:33 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 04.08 07:17:49 | sent 02.08 10:31:11 [coord]532|548[/coord] --> Ankunftszeit: 03.08.26 08:54:30 [player]Sozioforreal[/player]
-    [command]attack[/command] Ramme | return 05.08 19:35:15 | sent 31.07 22:24:45 [coord]604|561[/coord] --> Ankunftszeit: 03.08.26 09:00:00 [player]Die Farmtiere[/player]
-    [command]attack[/command] Ramme | return 04.08 07:00:34 | sent 02.08 11:00:34 [coord]491|574[/coord] --> Ankunftszeit: 03.08.26 09:00:34 [player]Berittener Koala[/player]
-    [command]attack[/command] Ramme | return 05.08 09:53:13 | sent 01.08 12:04:23 [coord]567|585[/coord] --> Ankunftszeit: 03.08.26 10:58:48 [player]Sybill Proxyspawney[/player]
-    [command]attack[/command] Ramme | return 05.08 10:05:52 | sent 01.08 12:09:22 [coord]531|615[/coord] --> Ankunftszeit: 03.08.26 11:07:37 [player]TeslaTekin[/player]
-    [command]attack[/command] Ramme | return 06.08 08:36:48 | sent 01.08 10:30:26 [coord]598|480[/coord] --> Ankunftszeit: 03.08.26 21:33:37 [player]daymio[/player]
-	
-[b]Dorf:[/b] [coord]489|532[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  964  962  0  123  750  0  10  154  0 
-
-    [command]attack[/command] Ramme | return 05.08 17:43:01 | sent 31.07 20:17:25 [coord]606|542[/coord] --> Ankunftszeit: 03.08.26 07:00:13 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 04.08 17:00:58 | sent 01.08 22:47:48 [coord]541|573[/coord] --> Ankunftszeit: 03.08.26 07:54:23 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 04.08 17:54:01 | sent 01.08 22:09:29 [coord]499|599[/coord] --> Ankunftszeit: 03.08.26 08:01:45 [player]Berittener Koala[/player]
-    [command]attack[/command] Ramme | return 04.08 18:21:48 | sent 01.08 21:46:14 [coord]557|541[/coord] --> Ankunftszeit: 03.08.26 08:04:01 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 04.08 17:19:16 | sent 01.08 22:57:04 [coord]482|598[/coord] --> Ankunftszeit: 03.08.26 08:08:10 [player]Zudoda[/player]
-    [command]attack[/command] Ramme | return 04.08 17:37:32 | sent 01.08 22:46:30 [coord]514|594[/coord] --> Ankunftszeit: 03.08.26 08:12:01 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 06.08 01:37:26 | sent 31.07 16:22:34 [coord]616|556[/coord] --> Ankunftszeit: 03.08.26 09:00:00 [player]All Eyez on Me[/player]
-    [command]attack[/command] Ramme | return 04.08 07:36:23 | sent 02.08 10:29:03 [coord]533|542[/coord] --> Ankunftszeit: 03.08.26 09:02:43 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 04.08 20:37:24 | sent 01.08 21:33:36 [coord]558|549[/coord] --> Ankunftszeit: 03.08.26 09:05:30 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 06.08 09:22:22 | sent 31.07 12:01:08 [coord]598|442[/coord] --> Ankunftszeit: 03.08.26 10:41:45 [player]HerrDerAlimente[/player]
-    [command]attack[/command] Ramme | return 05.08 12:45:15 | sent 01.08 09:07:47 [coord]583|499[/coord] --> Ankunftszeit: 03.08.26 10:56:31 [player]Tild[/player]
-    [command]attack[/command] Ramme | return 07.08 06:06:35 | sent 02.08 05:20:29 [coord]598|480[/coord] --> Ankunftszeit: 04.08.26 17:43:32 [player]daymio[/player]
-	
-[b]Dorf:[/b] [coord]443|581[/coord]
-[b]Wallstufe:[/b] 15
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  47  50  2685  50  1366  100  150  51  0 
-
-    [command]attack[/command] Ramme | return 05.08 06:46:57 | sent 01.08 08:37:43 [coord]530|617[/coord] --> Ankunftszeit: 03.08.26 07:42:20 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 05.08 22:12:13 | sent 31.07 18:13:41 [coord]564|554[/coord] --> Ankunftszeit: 03.08.26 08:12:57 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 05.08 22:53:10 | sent 31.07 18:08:46 [coord]565|555[/coord] --> Ankunftszeit: 03.08.26 08:30:58 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 05.08 18:57:35 | sent 31.07 22:07:05 [coord]559|595[/coord] --> Ankunftszeit: 03.08.26 08:32:20 [player]All Eyez on Me[/player]
-    [command]attack[/command] Ramme | return 04.08 03:34:34 | sent 02.08 14:12:46 [coord]479|591[/coord] --> Ankunftszeit: 03.08.26 08:53:40 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 04.08 02:38:32 | sent 02.08 15:17:12 [coord]478|576[/coord] --> Ankunftszeit: 03.08.26 08:57:52 [player]Berittener Koala[/player]
-    [command]attack[/command] Ramme | return 05.08 22:21:44 | sent 31.07 20:21:30 [coord]565|580[/coord] --> Ankunftszeit: 03.08.26 09:21:37 [player]All Eyez on Me[/player]
-	
-[b]Dorf:[/b] [coord]454|586[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  301  51  2374  45  1206  0  133  46  0 
-
-    [command]attack[/command] Ramme | return 05.08 21:18:43 | sent 31.07 18:13:51 [coord]572|551[/coord] --> Ankunftszeit: 03.08.26 07:46:17 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 06.08 06:41:31 | sent 31.07 12:14:23 [coord]567|506[/coord] --> Ankunftszeit: 03.08.26 09:27:57 [player]Beer*[/player]
-    [command]attack[/command] Ramme | return 05.08 05:38:32 | sent 01.08 14:33:02 [coord]526|537[/coord] --> Ankunftszeit: 03.08.26 10:05:47 [player]HerrDerAlimente[/player]
-	
-[b]Dorf:[/b] [coord]488|533[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  397  25  0  48  245  3  5  138  0 
-
-    [command]attack[/command] Ramme | return 04.08 16:53:39 | sent 01.08 22:49:33 [coord]539|575[/coord] --> Ankunftszeit: 03.08.26 07:51:36 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 04.08 17:38:24 | sent 01.08 22:16:32 [coord]495|600[/coord] --> Ankunftszeit: 03.08.26 07:57:28 [player]Zudoda[/player]
-    [command]attack[/command] Ramme | return 04.08 18:18:46 | sent 01.08 21:57:38 [coord]552|557[/coord] --> Ankunftszeit: 03.08.26 08:08:12 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 04.08 19:58:46 | sent 01.08 21:05:58 [coord]508|601[/coord] --> Ankunftszeit: 03.08.26 08:32:22 [player]TeslaTekin[/player]
-    [command]attack[/command] Ramme | return 04.08 18:39:32 | sent 01.08 22:45:42 [coord]499|600[/coord] --> Ankunftszeit: 03.08.26 08:42:37 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 04.08 22:56:22 | sent 01.08 18:42:10 [coord]564|539[/coord] --> Ankunftszeit: 03.08.26 08:49:16 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 05.08 19:48:55 | sent 31.07 22:11:05 [coord]602|562[/coord] --> Ankunftszeit: 03.08.26 09:00:00 [player]Die Farmtiere[/player]
-    [command]attack[/command] Ramme | return 04.08 20:11:24 | sent 01.08 21:58:34 [coord]557|546[/coord] --> Ankunftszeit: 03.08.26 09:04:59 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 06.08 00:29:05 | sent 31.07 20:13:37 [coord]612|525[/coord] --> Ankunftszeit: 03.08.26 10:21:21 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 05.08 10:40:29 | sent 01.08 11:05:13 [coord]559|597[/coord] --> Ankunftszeit: 03.08.26 10:52:51 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 06.08 08:10:06 | sent 01.08 10:31:14 [coord]592|478[/coord] --> Ankunftszeit: 03.08.26 21:20:40 [player]daymio[/player]
-	
-[b]Dorf:[/b] [coord]478|550[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  519  25  187  84  333  20  35  187  0 
-
-    [command]attack[/command] Ramme | return 04.08 23:17:52 | sent 01.08 16:39:10 [coord]555|534[/coord] --> Ankunftszeit: 03.08.26 07:58:31 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 06.08 00:56:09 | sent 31.07 17:09:17 [coord]576|468[/coord] --> Ankunftszeit: 03.08.26 09:02:43 [player]Beer*[/player]
-    [command]attack[/command] Ramme | return 05.08 03:45:01 | sent 01.08 16:32:01 [coord]561|544[/coord] --> Ankunftszeit: 03.08.26 10:08:31 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 04.08 09:55:18 | sent 02.08 10:39:24 [coord]525|555[/coord] --> Ankunftszeit: 03.08.26 10:17:21 [player]Sozioforreal[/player]
-    [command]attack[/command] Ramme | return 06.08 04:47:09 | sent 31.07 16:24:13 [coord]608|575[/coord] --> Ankunftszeit: 03.08.26 10:35:41 [player]All Eyez on Me[/player]
-    [command]attack[/command] Ramme | return 05.08 04:12:49 | sent 01.08 16:58:45 [coord]546|598[/coord] --> Ankunftszeit: 03.08.26 10:35:47 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 06.08 00:39:58 | sent 31.07 20:54:16 [coord]599|524[/coord] --> Ankunftszeit: 03.08.26 10:47:07 [player]Beer*[/player]
-    [command]attack[/command] Ramme | return 05.08 01:38:17 | sent 02.08 11:01:41 [coord]534|578[/coord] --> Ankunftszeit: 03.08.26 18:19:59 [player]Sozioforreal[/player]
-	
-[b]Dorf:[/b] [coord]490|531[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  467  171  0  1217  817  0  5  118  0 
-
-    [command]attack[/command] Ramme | return 04.08 17:04:16 | sent 01.08 22:52:56 [coord]485|597[/coord] --> Ankunftszeit: 03.08.26 07:58:36 [player]Zudoda[/player]
-    [command]attack[/command] Ramme | return 04.08 17:25:09 | sent 01.08 22:55:43 [coord]476|596[/coord] --> Ankunftszeit: 03.08.26 08:10:26 [player]Zudoda[/player]
-    [command]attack[/command] Ramme | return 04.08 08:37:48 | sent 02.08 12:01:54 [coord]523|561[/coord] --> Ankunftszeit: 03.08.26 10:19:51 [player]Belehr[/player]
-    [command]attack[/command] Ramme | return 05.08 05:30:13 | sent 01.08 15:10:23 [coord]568|568[/coord] --> Ankunftszeit: 03.08.26 10:20:18 [player]Zapzarap[/player]
-    [command]attack[/command] Ramme | return 04.08 08:38:48 | sent 02.08 12:02:54 [coord]523|561[/coord] --> Ankunftszeit: 03.08.26 10:20:51 [player]Belehr[/player]
-    [command]attack[/command] Ramme | return 04.08 10:39:18 | sent 02.08 10:03:16 [coord]529|560[/coord] --> Ankunftszeit: 03.08.26 10:21:17 [player]Sozioforreal[/player]
-    [command]attack[/command] Ramme | return 05.08 07:02:45 | sent 01.08 13:40:13 [coord]558|589[/coord] --> Ankunftszeit: 03.08.26 10:21:29 [player]Bumsebiene[/player]
-    [command]attack[/command] Ramme | return 05.08 07:19:41 | sent 01.08 13:27:21 [coord]564|582[/coord] --> Ankunftszeit: 03.08.26 10:23:31 [player]Sybill Proxyspawney[/player]
-    [command]attack[/command] Ramme | return 06.08 08:48:28 | sent 31.07 12:00:24 [coord]625|571[/coord] --> Ankunftszeit: 03.08.26 10:24:26 [player]All Eyez on Me[/player]
-    [command]attack[/command] Ramme | return 04.08 09:44:26 | sent 02.08 12:02:06 [coord]498|576[/coord] --> Ankunftszeit: 03.08.26 10:53:16 [player]Belehr[/player]
-    [command]attack[/command] Ramme | return 06.08 06:27:59 | sent 01.08 10:30:49 [coord]596|484[/coord] --> Ankunftszeit: 03.08.26 20:29:24 [player]daymio[/player]
-    [command]attack[/command] Ramme | return 07.08 10:14:40 | sent 02.08 05:20:12 [coord]599|470[/coord] --> Ankunftszeit: 04.08.26 19:47:26 [player]daymio[/player]
-	
-[b]Dorf:[/b] [coord]482|545[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  493  440  0  148  452  0  5  223  0 
-
-    [command]attack[/command] Ramme | return 04.08 23:27:10 | sent 01.08 16:32:06 [coord]560|557[/coord] --> Ankunftszeit: 03.08.26 07:59:38 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 05.08 02:39:22 | sent 01.08 15:39:00 [coord]565|546[/coord] --> Ankunftszeit: 03.08.26 09:09:11 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 05.08 03:18:27 | sent 01.08 16:18:05 [coord]565|546[/coord] --> Ankunftszeit: 03.08.26 09:48:16 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 06.08 03:20:57 | sent 31.07 16:20:03 [coord]613|547[/coord] --> Ankunftszeit: 03.08.26 09:50:30 [player]Die Farmtiere[/player]
-    [command]attack[/command] Ramme | return 06.08 03:28:04 | sent 31.07 16:27:50 [coord]613|544[/coord] --> Ankunftszeit: 03.08.26 09:57:57 [player]All Eyez on Me[/player]
-    [command]attack[/command] Ramme | return 05.08 13:21:47 | sent 01.08 07:03:35 [coord]561|610[/coord] --> Ankunftszeit: 03.08.26 10:12:41 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 05.08 05:27:07 | sent 01.08 15:02:45 [coord]561|510[/coord] --> Ankunftszeit: 03.08.26 10:14:56 [player]Beer*[/player]
-    [command]attack[/command] Ramme | return 05.08 05:31:36 | sent 01.08 14:59:36 [coord]530|617[/coord] --> Ankunftszeit: 03.08.26 10:15:36 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 04.08 03:22:26 | sent 02.08 17:10:08 [coord]473|578[/coord] --> Ankunftszeit: 03.08.26 10:16:17 [player]Berittener Koala[/player]
-    [command]attack[/command] Ramme | return 04.08 06:40:50 | sent 02.08 14:04:22 [coord]507|577[/coord] --> Ankunftszeit: 03.08.26 10:22:36 [player]Belehr[/player]
-    [command]attack[/command] Ramme | return 05.08 06:20:24 | sent 01.08 16:53:38 [coord]531|615[/coord] --> Ankunftszeit: 03.08.26 11:37:01 [player]TeslaTekin[/player]
-	
-[b]Dorf:[/b] [coord]438|598[/coord]
-[b]Wallstufe:[/b] 1
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  218  0  2923  0  1484  0  194  64  0 
-
-    [command]attack[/command] Ramme | return 05.08 18:30:52 | sent 31.07 21:30:36 [coord]549|561[/coord] --> Ankunftszeit: 03.08.26 08:00:44 [player]Zapzarap[/player]
-    [command]attack[/command] Ramme | return 05.08 22:56:22 | sent 31.07 17:32:24 [coord]544|531[/coord] --> Ankunftszeit: 03.08.26 08:14:23 [player]Quadrivium[/player]
-    [command]attack[/command] Ramme | return 04.08 17:46:20 | sent 01.08 22:49:56 [coord]503|614[/coord] --> Ankunftszeit: 03.08.26 08:18:08 [player]*Arbeiterritter*[/player]
-    [command]attack[/command] Ramme | return 06.08 00:21:25 | sent 31.07 20:15:23 [coord]562|593[/coord] --> Ankunftszeit: 03.08.26 10:18:24 [player]Zapzarap[/player]
-    [command]attack[/command] Ramme | return 06.08 00:32:46 | sent 31.07 20:31:34 [coord]543|532[/coord] --> Ankunftszeit: 03.08.26 10:32:10 [player]Quadrivium[/player]
-	
-[b]Dorf:[/b] [coord]493|525[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  463  0  0  52  500  0  5  250  0 
-
-    [command]attack[/command] Ramme | return 04.08 18:04:56 | sent 01.08 21:57:52 [coord]545|569[/coord] --> Ankunftszeit: 03.08.26 08:01:24 [player]Bumsebiene[/player]
-    [command]attack[/command] Ramme | return 04.08 23:41:52 | sent 01.08 16:32:22 [coord]564|560[/coord] --> Ankunftszeit: 03.08.26 08:07:07 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 04.08 23:03:19 | sent 01.08 20:43:29 [coord]566|539[/coord] --> Ankunftszeit: 03.08.26 09:53:24 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 04.08 10:26:09 | sent 02.08 10:03:45 [coord]535|549[/coord] --> Ankunftszeit: 03.08.26 10:14:57 [player]Sozioforreal[/player]
-    [command]attack[/command] Ramme | return 05.08 05:30:21 | sent 01.08 15:03:13 [coord]568|568[/coord] --> Ankunftszeit: 03.08.26 10:16:47 [player]Zapzarap[/player]
-    [command]attack[/command] Ramme | return 05.08 08:12:34 | sent 01.08 12:55:28 [coord]576|563[/coord] --> Ankunftszeit: 03.08.26 10:34:01 [player]Sybill Proxyspawney[/player]
-    [command]attack[/command] Ramme | return 05.08 10:09:13 | sent 01.08 12:09:13 [coord]493|619[/coord] --> Ankunftszeit: 03.08.26 11:09:13 [player]TeslaTekin[/player]
-    [command]attack[/command] Ramme | return 06.08 02:27:44 | sent 31.07 20:03:44 [coord]602|461[/coord] --> Ankunftszeit: 03.08.26 11:15:44 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 06.08 08:09:16 | sent 01.08 10:30:40 [coord]605|489[/coord] --> Ankunftszeit: 03.08.26 21:19:58 [player]daymio[/player]
-	
-[b]Dorf:[/b] [coord]488|532[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  17443  1009  0  61  120  5262  5  126  2 
-
-    [command]attack[/command] Ramme | return 04.08 18:04:44 | sent 01.08 21:59:00 geflext [coord]522|591[/coord] --> Ankunftszeit: 03.08.26 08:01:52 [player]Belehr[/player]
-    [command]attack[/command] Ramme | return 05.08 08:24:55 | sent 01.08 11:43:01 [coord]556|595[/coord] --> Ankunftszeit: 03.08.26 10:03:58 [player]Morimuh[/player]
-    [command]attack[/command] Ramme | return 05.08 23:59:54 | sent 31.07 20:12:14 [coord]611|518[/coord] --> Ankunftszeit: 03.08.26 10:06:04 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 05.08 11:30:11 | sent 01.08 09:05:45 [coord]548|610[/coord] --> Ankunftszeit: 03.08.26 10:17:58 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 05.08 01:03:59 | sent 01.08 19:32:31 [coord]527|599[/coord] --> Ankunftszeit: 03.08.26 10:18:15 [player]Belehr[/player]
-    [command]attack[/command] Ramme | return 04.08 03:40:12 | sent 02.08 17:00:00 [coord]507|561[/coord] --> Ankunftszeit: 03.08.26 10:20:06 [player]Berittener Koala[/player]
-    [command]attack[/command] Ramme | return 05.08 11:15:20 | sent 01.08 09:25:08 [coord]552|606[/coord] --> Ankunftszeit: 03.08.26 10:20:14 [player]Anabol[/player]
-    [command]attack[/command] Ramme | return 05.08 11:13:22 | sent 01.08 09:28:04 [coord]572|582[/coord] --> Ankunftszeit: 03.08.26 10:20:43 [player]Zapzarap[/player]
-    [command]attack[/command] Ramme | return 04.08 13:04:10 | sent 02.08 09:10:32 [coord]535|554[/coord] --> Ankunftszeit: 03.08.26 11:07:21 [player]Morimuh[/player]
-    [command]attack[/command] Ramme | return 05.08 10:06:39 | sent 01.08 12:21:59 [coord]566|480[/coord] --> Ankunftszeit: 03.08.26 11:14:19 [player]HerrDerAlimente[/player]
-	
-[b]Dorf:[/b] [coord]449|600[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  96  96  1321  81  774  25  128  108  0 
-
-    [command]attack[/command] Ramme | return 04.08 23:32:47 | sent 01.08 16:31:15 [coord]511|551[/coord] --> Ankunftszeit: 03.08.26 08:02:01 [player]DobbyFreeElf[/player]
-    [command]attack[/command] Ramme | return 05.08 19:19:19 | sent 31.07 22:04:59 [coord]565|583[/coord] --> Ankunftszeit: 03.08.26 08:42:09 [player]Die Farmtiere[/player]
-    [command]attack[/command] Ramme | return 06.08 04:48:04 | sent 31.07 14:15:54 [coord]581|574[/coord] --> Ankunftszeit: 03.08.26 09:31:59 [player]Die Farmtiere[/player]
-    [command]attack[/command] Ramme | return 06.08 18:02:30 | sent 31.07 12:11:54 [coord]571|513[/coord] --> Ankunftszeit: 03.08.26 15:07:12 [player]Beer*[/player]
-    [command]attack[/command] Ramme | return 05.08 09:32:20 | sent 01.08 22:23:18 [coord]532|605[/coord] --> Ankunftszeit: 03.08.26 15:57:49 [player]Anabol[/player]
-	
-[b]Dorf:[/b] [coord]443|580[/coord]
-[b]Wallstufe:[/b] 20
-[b]Zustimmung:[/b] 100
-
-[b]Verteidiger:[/b]  2897  268  0  91  338  726  5  175  0 
-
-    [command]attack[/command] Ramme | return 04.08 18:21:03 | sent 01.08 21:43:43 [coord]508|602[/coord] --> Ankunftszeit: 03.08.26 08:02:23 [player]TeslaTekin[/player]
-    [command]attack[/command] Ramme | return 05.08 02:57:50 | sent 01.08 14:54:16 [coord]514|625[/coord] --> Ankunftszeit: 03.08.26 08:56:03 [player]TeslaTekin[/player]
-    [command]attack[/command] Ramme | return 06.08 00:07:42 | sent 31.07 18:13:54 [coord]568|565[/coord] --> Ankunftszeit: 03.08.26 09:10:48 [player]All Eyez on Me[/player]
-    [command]attack[/command] Ramme | return 05.08 20:15:21 | sent 31.07 22:08:59 [coord]550|530[/coord] --> Ankunftszeit: 03.08.26 09:12:10 [player]Quadrivium[/player]
- </script>
-<script type="text/plain" id="demoTroops">
-281
-1
-« -=01=- (461|598) K54 - 281 - Karte - Übersichten - Berichte - Nachrichten - Stamm - Rangliste - Mehr - Aufgaben »
-30.6K 122K 33.6K 19783/24000
-« - Farmgod - Farm Klicker - Hauptgebäude - Rekrutieren - Versammlungsplatz - Adelshof - Schmiede - Marktplatz - Angrifswarnung - Befehlsabbruchsrechner - Dorfnotiz festlegen/abrufen - Eingehende Angriffsübersicht - FakeGenerator - Retime Planer - Speicher ausgleicher - add_barbs - Wallentferner Barbarendörfer - farm finder - Snipe - Resourcen sender - Dörfer in Reichweite - Fake AP - Fake Deff Ap - Off AP - Deff Ap - AG Ap - Bonus-Barbarendörfer finder - debug - Tab - Bericht in Dorf Notiz »
-Truppen
-Übersicht
-Gruppen:
-[1] [2] [3] [4] [5] >alle<
-Alle 	Eigene 	Im Dorf 	Auswärts 	Unterwegs 	Verteidigung 	Unterstützungen
-Dorf (43) 											Aktion
--=01=- (461|598) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/axe_polished.webp"> Einfache Axt</h3> :: <ul><li>+4% Holzproduktion</li><li>Schwertkämpfer: +2% Angriffs- und Verteidigungsstärke</li><li>Leichte Kavallerie: +2% Angriffs- und Verteidigungsstärke</li></ul><p></p>] 	eigene 	98	100	4110	81	2056	0	300	100	12 	Befehle
-im Dorf 	32046	22403	4110	1202	2056	2075	300	101	12 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	32046	22403	4110	1202	2056	2075	300	101	12 	Truppen
--=02=- (458|586) K54 	eigene 	0	0	5999	50	3050	0	283	88	0 	Befehle
-im Dorf 	996	996	5999	50	3050	0	283	88	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	996	996	5999	50	3050	0	283	88	0 	Truppen
--=03=- (459|591) K54 	eigene 	97	97	5569	97	2775	0	300	100	5 	Befehle
-im Dorf 	22495	20730	5569	1165	2775	0	300	100	5 	Truppen
-auswärts 	0	0	0	0	70	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	22495	20730	5569	1165	2845	0	300	100	5 	Truppen
--=04=- (449|595) K54 	eigene 	350	332	0	150	0	0	0	0	0 	Befehle
-im Dorf 	350	332	0	150	0	0	0	0	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	350	332	0	150	0	0	0	0	0 	Truppen
--=05=- (449|600) K64 	eigene 	96	96	1321	79	774	0	128	108	0 	Befehle
-im Dorf 	96	96	1321	81	774	25	128	108	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	96	96	1321	81	774	25	128	108	0 	Truppen
--=06=- (457|590) K54 	eigene 	289	521	0	48	750	0	0	237	0 	Befehle
-im Dorf 	289	521	0	48	750	0	0	237	0 	Truppen
-auswärts 	3483	3233	0	102	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	3772	3754	0	150	750	0	0	237	0 	Truppen
--=07=- (453|595) K54 	eigene 	50	50	300	20	143	0	20	9	0 	Befehle
-im Dorf 	50	50	300	20	143	0	20	9	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	50	50	300	20	143	0	20	9	0 	Truppen
--=08=- (446|607) K64 	eigene 	50	50	1811	40	895	0	89	38	0 	Befehle
-im Dorf 	50	50	1811	40	895	0	89	38	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	50	50	1811	40	895	0	89	38	0 	Truppen
--=09=- (451|575) K54 	eigene 	80	79	3643	64	1847	0	190	69	0 	Befehle
-im Dorf 	80	79	3643	64	1847	0	190	69	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	80	79	3643	64	1847	0	190	69	0 	Truppen
--=10=- (450|588) K54 	eigene 	50	50	167	20	86	0	12	10	0 	Befehle
-im Dorf 	76	76	181	20	101	0	12	10	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	76	76	181	20	101	0	12	10	0 	Truppen
--=11=- (443|601) K64 	eigene 	50	50	200	20	95	0	20	10	0 	Befehle
-im Dorf 	50	50	200	20	165	0	20	10	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	50	50	200	20	165	0	20	10	0 	Truppen
--=12=- (457|592) K54 	eigene 	2048	2031	0	43	750	0	0	249	0 	Befehle
-im Dorf 	2048	2031	0	43	750	0	0	249	0 	Truppen
-auswärts 	2405	2404	0	107	0	0	0	1	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	4453	4435	0	150	750	0	0	250	0 	Truppen
--=13=- (451|581) K54 	eigene 	2445	2408	0	42	750	40	0	220	0 	Befehle
-im Dorf 	2445	2408	0	42	750	40	0	220	0 	Truppen
-auswärts 	2387	2387	0	108	0	0	0	1	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	4832	4795	0	150	750	40	0	221	0 	Truppen
--=14=- (477|551) K54 	eigene 	49	49	2653	60	1329	0	151	49	0 	Befehle
-im Dorf 	443	49	2653	60	1329	0	151	49	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	443	49	2653	60	1329	0	151	49	0 	Truppen
--=15=- (478|550) K54 	eigene 	519	25	187	84	333	20	35	187	0 	Befehle
-im Dorf 	519	25	187	84	333	20	35	187	0 	Truppen
-auswärts 	4974	0	0	30	0	1023	0	1	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	5493	25	187	114	333	1043	35	188	0 	Truppen
--=18=- (482|545) K54 	eigene 	400	347	0	148	452	0	5	222	0 	Befehle
-im Dorf 	493	440	0	148	452	0	5	223	0 	Truppen
-auswärts 	5500	400	0	0	0	1378	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	5993	840	0	148	452	1378	5	223	0 	Truppen
--=19=- (483|535) K54 	eigene 	100	101	3237	55	1624	0	270	98	3 	Befehle
-im Dorf 	15385	15385	3237	872	1624	0	270	98	3 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	15385	15385	3237	872	1624	0	270	98	3 	Truppen
--=20=- (488|533) K54 	eigene 	397	25	0	48	245	3	5	138	0 	Befehle
-im Dorf 	397	25	0	48	245	3	5	138	0 	Truppen
-auswärts 	3600	0	0	35	0	762	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	3997	25	0	83	245	765	5	138	0 	Truppen
--=23=- (457|609) K64 	eigene 	100	100	1417	92	698	0	70	96	0 	Befehle
-im Dorf 	17647	12897	1417	1056	698	450	70	97	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	17647	12897	1417	1056	698	450	70	97	0 	Truppen
--=25=- (447|573) K54 	eigene 	94	93	2942	68	1560	0	206	81	0 	Befehle
-im Dorf 	94	93	2942	68	1560	0	206	81	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	94	93	2942	68	1560	0	206	81	0 	Truppen
--=26=- (493|525) K54 	eigene 	463	0	0	52	500	0	5	250	0 	Befehle
-im Dorf 	463	0	0	52	500	0	5	250	0 	Truppen
-auswärts 	6316	216	0	96	0	1600	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	6779	216	0	148	500	1600	5	250	0 	Truppen
--=27=- (444|588) K54 	eigene 	494	0	0	20	277	162	5	87	0 	Befehle
-im Dorf 	694	0	0	20	277	162	5	87	0 	Truppen
-auswärts 	1781	1385	0	70	0	100	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	2475	1385	0	90	277	262	5	87	0 	Truppen
--=28=- (494|525) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/banner_polished.webp"> Einfaches Banner</h3> :: <ul><li>Schwere Kavallerie: +4% Angriffs- und Verteidigungsstärke</li><li>Axtkämpfer: +2% Angriffs- und Verteidigungsstärke</li><li>+2% Eisenproduktion</li></ul><p></p>] 	eigene 	664	23	0	34	159	0	5	35	0 	Befehle
-im Dorf 	664	23	0	34	159	0	5	35	0 	Truppen
-auswärts 	2000	0	0	15	0	549	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	2664	23	0	49	159	549	5	35	0 	Truppen
--=30=- (438|598) K54 	eigene 	0	0	2923	0	1484	0	194	64	0 	Befehle
-im Dorf 	218	0	2923	0	1484	0	194	64	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	218	0	2923	0	1484	0	194	64	0 	Truppen
--=31=- (440|603) K64 	eigene 	782	0	0	20	92	259	5	98	0 	Befehle
-im Dorf 	782	0	0	20	92	259	5	98	0 	Truppen
-auswärts 	541	324	0	19	0	25	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	1323	324	0	39	92	284	5	98	0 	Truppen
--=32=- (441|602) K64 	eigene 	40	40	788	17	374	0	40	20	0 	Befehle
-im Dorf 	40	40	788	17	374	0	40	20	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	40	40	788	17	374	0	40	20	0 	Truppen
--=33=- (443|581) K54 	eigene 	47	50	2685	50	1366	0	150	51	0 	Befehle
-im Dorf 	47	50	2685	50	1366	100	150	51	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	47	50	2685	50	1366	100	150	51	0 	Truppen
--=34=- (443|580) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/shortspear_refined.webp"> Verbesserter Kurzspeer</h3> :: <ul><li>Leichte Kavallerie: +6% Angriffs- und Verteidigungsstärke</li><li>Werkstatt: +3% Rekrutierungs-Geschwindigkeit</li><li>Späher: +3% Tarnung</li></ul><p></p>] 	eigene 	2897	268	0	91	338	726	5	175	0 	Befehle
-im Dorf 	2897	268	0	91	338	726	5	175	0 	Truppen
-auswärts 	1370	397	0	20	0	293	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	4267	665	0	111	338	1019	5	175	0 	Truppen
--=35=- (443|579) K54 	eigene 	1951	98	0	115	500	0	5	250	0 	Befehle
-im Dorf 	1951	98	0	115	500	0	5	250	0 	Truppen
-auswärts 	1693	692	0	35	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	3644	790	0	150	500	0	5	250	0 	Truppen
--=37=- (489|530) K54 	eigene 	483	24	0	88	0	0	0	0	0 	Befehle
-im Dorf 	483	24	0	88	0	0	0	0	0 	Truppen
-auswärts 	4195	0	0	17	0	1096	0	0	0
-unterwegs 	0	0	0	0	349	0	5	234	0 	Befehle
-insgesamt 	4678	24	0	105	349	1096	5	234	0 	Truppen
--=38=- (490|531) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/chisel_superior.webp"> Erstklassiger Meißel</h3> :: <ul><li>+8% Lehmproduktion</li><li>Schwere Kavallerie: +4% Angriffs- und Verteidigungsstärke</li><li>Späher: +4% Wahrnehmung</li></ul><p></p>] 	eigene 	467	171	0	1217	817	0	5	118	0 	Befehle
-im Dorf 	467	171	0	1217	817	0	5	118	0 	Truppen
-auswärts 	800	0	0	50	0	829	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	1267	171	0	1267	817	829	5	118	0 	Truppen
--=39=- (491|530) K54 	eigene 	49	49	1	0	0	0	1	0	0 	Befehle
-im Dorf 	49	49	1	0	0	0	1	0	0 	Truppen
-auswärts 	0	0	0	40	0	0	0	0	0
-unterwegs 	0	0	873	0	443	0	49	20	0 	Befehle
-insgesamt 	49	49	874	40	443	0	50	20	0 	Truppen
--=40=- (489|532) K54 	eigene 	964	962	0	123	750	0	10	154	0 	Befehle
-im Dorf 	964	962	0	123	750	0	10	154	0 	Truppen
-auswärts 	643	643	0	27	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	1607	1605	0	150	750	0	10	154	0 	Truppen
--=41=- (489|531) K54 	eigene 	518	514	0	137	750	0	4	0	0 	Befehle
-im Dorf 	518	514	0	137	750	0	4	0	0 	Truppen
-auswärts 	656	656	0	13	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	1174	1170	0	150	750	0	4	0	0 	Truppen
--=42=- (457|568) K54 	eigene 	6554	25	0	108	364	1153	5	265	0 	Befehle
-im Dorf 	6599	25	0	110	364	1165	5	265	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	6599	25	0	110	364	1165	5	265	0 	Truppen
--=43=- (486|532) K54 	eigene 	0	0	4609	0	2027	0	296	97	0 	Befehle
-im Dorf 	306	0	4609	0	2027	0	296	97	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	306	0	4609	0	2027	0	296	97	0 	Truppen
--=44=- (488|532) K54 	eigene 	1243	209	0	11	120	353	5	126	2 	Befehle
-im Dorf 	17443	1009	0	61	120	5262	5	126	2 	Truppen
-auswärts 	1115	809	0	74	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	18558	1818	0	135	120	5262	5	126	2 	Truppen
--=45=- (485|531) K54 	eigene 	73	73	14	42	10	0	0	0	0 	Befehle
-im Dorf 	147	147	14	47	10	0	0	0	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	2002	0	1047	0	153	59	0 	Befehle
-insgesamt 	147	147	2016	47	1057	0	153	59	0 	Truppen
--=46=- (455|523) K54 	eigene 	100	305	0	122	576	35	8	104	0 	Befehle
-im Dorf 	100	305	0	122	576	35	8	104	0 	Truppen
-auswärts 	258	216	0	0	0	0	0	0	0
-unterwegs 	1201	600	0	0	0	297	0	0	0 	Befehle
-insgesamt 	1559	1121	0	122	576	332	8	104	0 	Truppen
--=47=- (482|522) K54 	eigene 	193	195	3359	60	1549	0	217	77	0 	Befehle
-im Dorf 	193	195	3359	60	1549	0	217	77	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	193	195	3359	60	1549	0	217	77	0 	Truppen
--=48=- (454|586) K54 	eigene 	51	51	2374	45	1206	0	133	46	0 	Befehle
-im Dorf 	301	51	2374	45	1206	0	133	46	0 	Truppen
-auswärts 	26	26	14	0	15	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	327	77	2388	45	1221	0	133	46	0 	Truppen
--=49=- (476|593) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/banner_polished.webp"> Einfaches Banner</h3> :: <ul><li>Schwere Kavallerie: +4% Angriffs- und Verteidigungsstärke</li><li>Werkstatt: +2% Rekrutierungs-Geschwindigkeit</li><li>Späher: +2% Tarnung</li></ul><p></p>] 	eigene 	43	64	2481	60	1397	0	141	51	16 	Befehle
-im Dorf 	29931	31020	2484	2800	1397	0	141	51	16 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	29931	31020	2484	2800	1397	0	141	51	16 	Truppen
--=50=- MEINS (461|604) K64 	eigene 	1125	25	0	40	92	240	5	110	0 	Befehle
-im Dorf 	29013	17378	0	220	92	1548	5	110	0 	Truppen
-auswärts 	0	0	0	0	0	0	0	0	0
-unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
-insgesamt 	29013	17378	0	220	92	1548	5	110	0 	Truppen
-
-Desktop-Version
-
-18:41:38 02/08/2026
-</script>
 <script>
 /* Tabben-Planer v2 – Rechenkern (keine DOM-Abhängigkeit, in Node testbar) */
 (function (root) {
@@ -784,7 +424,7 @@ Desktop-Version
   const DEF_VALUE = { spear: 30, sword: 32.5, axe: 7.5, archer: 45, spy: 1.5, light: 35, marcher: 35, heavy: 140, ram: 35, catapult: 75, knight: 125, snob: 75 };
 
   const DEFAULT_PRESETS = [
-    { name: 'Dual SD 200', active: true, units: { spear: 200, sword: 200 } },
+    { name: 'Dual 200', active: true, units: { spear: 200, sword: 200 } },
     { name: 'Flex 300/100', active: true, units: { spear: 300, heavy: 100 } },
     { name: 'SKav 100', active: true, units: { heavy: 100 } }
   ];
@@ -1176,7 +816,7 @@ Desktop-Version
     let nowSource = input.now != null ? 'manuell' : 'Gerätezeit';
     if (input.now == null && tr.serverTime) {
       const diff = Math.abs(Date.now() - tr.serverTime);
-      if (diff > 24 * 3600e3) { now = tr.serverTime; nowSource = 'Serverzeit aus Truppenübersicht (Archivdaten)'; warnings.push('Truppenübersicht ist älter als 24 h – gerechnet wird mit deren Serverzeit (Testmodus).'); }
+      if (diff > 24 * 3600e3) { now = tr.serverTime; nowSource = 'Serverzeit aus Truppenübersicht (Archivdaten)'; warnings.push('Die Truppenübersicht ist über 24 h alt. Gerechnet wird mit ihrer Serverzeit; für einen aktuellen Plan neue Übersicht einfügen.'); }
       else { now = Math.max(Date.now(), tr.serverTime); nowSource = 'Gerätezeit'; }
     }
 
@@ -1318,31 +958,50 @@ Desktop-Version
 <script>
 (function(){
   'use strict';
-  const E = window.TPEngine, $ = id => document.getElementById(id);
-  const L = E.UNIT_LABELS;
-  const cols = ()=> (state.settings.units && state.settings.units.length) ? state.settings.units : E.UNITS;
-  let worlds = null; // aus worlds/index.json
-  const STORE = 'tabbenplaner_v2';
-  const DEMO_IDS = $('demoIds').textContent;
-  const DEMO_SETTINGS = { world:'de254', unitSpeed:0.8, worldSpeed:1.25, speedSource:'Testdaten de254', speeds: Object.assign({}, E.BASE_SPEED), units: E.UNITS.slice(), defValues: null, millis: false, landOffsetSec: 0 };
-  let demo = false, idText = '', idSource = '';
+  const E = window.TPEngine, $ = id => document.getElementById(id), L = E.UNIT_LABELS;
+  const STORE = 'tabbenplaner_v2', SENT = 'tabbuddy_sent';
+  const ICON = k => `https://ds-ultimate.de/images/ds_images/unit/${k}.png`;
+  const img = k => `<img class="u" src="${ICON(k)}" alt="${L[k]||k}" title="${L[k]||k}" loading="lazy" onerror="this.replaceWith(document.createTextNode('${L[k]||k} '))">`;
+  const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const F = E.fmtTime, nf = n => String(n).replace('.', ',');
+  const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '?' : d.toLocaleString('de-CH', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); };
+
   let state = { settings: JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), presets: JSON.parse(JSON.stringify(E.DEFAULT_PRESETS)) };
-  let result = null, exportTab = 'ds', timer = null, recalcT = null;
+  let worlds = null, result = null, idText = '', idSource = '', recalcT = null, timer = null, sent = {};
+  const cols = ()=> (state.settings.units && state.settings.units.length) ? state.settings.units : E.UNITS;
+  // In Paketen sinnvolle Einheiten: Deff plus Ramme als langsamer Zeitfüller
+  const pkUnits = ()=> cols().filter(k=> ['spear','sword','archer','spy','heavy','ram'].includes(k));
 
-  function load(){ try{ const raw = localStorage.getItem(STORE); if(raw){ const d = JSON.parse(raw);
+  function load(){ try{ const d = JSON.parse(localStorage.getItem(STORE)||'null'); if(d){
       if(d.settings) state.settings = Object.assign(state.settings, d.settings, {unitWeights:Object.assign({}, state.settings.unitWeights, d.settings.unitWeights||{}), speeds:Object.assign({}, state.settings.speeds, d.settings.speeds||{})});
-      if(Array.isArray(d.presets) && d.presets.length) state.presets = d.presets; } }catch(e){} }
+      if(Array.isArray(d.presets) && d.presets.length) state.presets = d.presets; }
+      sent = JSON.parse(localStorage.getItem(SENT)||'{}') || {}; }catch(e){} }
   function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){} }
+  function saveSent(){ try{ localStorage.setItem(SENT, JSON.stringify(sent)); }catch(e){} }
 
-  // ---------- Einstellungen binden ----------
+  // ---------- Einstellungen ----------
   function fillInputs(){
     document.querySelectorAll('[data-k]').forEach(el=>{
       const v = state.settings[el.dataset.k];
-      if(el.type==='checkbox') el.checked = !!v; else el.value = v;
-      const out = el.parentElement.querySelector('output'); if(out) out.textContent = Number(v).toFixed(2).replace(/\.?0+$/,'');
+      if(el.type==='checkbox') el.checked = !!v; else el.value = v ?? '';
+      const out = el.parentElement.querySelector('output'); if(out) out.textContent = nf(Number(v));
     });
     document.querySelectorAll('[data-uw]').forEach(el=> el.value = state.settings.unitWeights[el.dataset.uw]);
     cols().forEach(k=>{ const el = $('spd_'+k); if(el) el.value = state.settings.speeds[k] ?? E.BASE_SPEED[k]; });
+  }
+  function bindSettings(){
+    document.querySelectorAll('[data-k]').forEach(el=>{
+      const k = el.dataset.k, out = el.parentElement.querySelector('output');
+      el.addEventListener('input', ()=>{
+        if(['unitSpeed','worldSpeed'].includes(k)) state.settings.speedSource = 'manuell';
+        state.settings[k] = el.type==='checkbox' ? el.checked : (el.type==='number'||el.type==='range'||el.tagName==='SELECT') ? (parseFloat(el.value)||0) : el.value;
+        if(out) out.textContent = nf(state.settings[k]);
+        if(k==='world'){ state.settings.speedSource = ''; loadIds(); updateWorld(); }
+        save(); schedule();
+      });
+    });
+    document.querySelectorAll('[data-uw]').forEach(el=> el.addEventListener('input', ()=>{ state.settings.unitWeights[el.dataset.uw] = parseFloat(el.value)||0; save(); schedule(); }));
+    $('sNow').addEventListener('input', schedule);
   }
   function renderSpeedFields(){
     const sf = $('speedFields'); sf.innerHTML = '';
@@ -1353,198 +1012,52 @@ Desktop-Version
       lab.appendChild(inp); sf.appendChild(lab);
     });
   }
-  function bindSettings(){
-    document.querySelectorAll('[data-k]').forEach(el=>{
-      const k = el.dataset.k;
-      const out = el.parentElement.querySelector('output');
-      el.addEventListener('input', ()=>{
-        if(['unitSpeed','worldSpeed'].includes(k)) state.settings.speedSource = 'manuell';
-        state.settings[k] = el.type==='checkbox' ? el.checked : (el.type==='number'||el.type==='range'||el.tagName==='SELECT') ? (parseFloat(el.value)||0) : el.value;
-        if(out) out.textContent = String(state.settings[k]);
-        if(k==='world'){ state.settings.speedSource = ''; loadIds(); updateWorld(); }
-        save(); schedule();
-      });
-    });
-    document.querySelectorAll('[data-uw]').forEach(el=>{
-      el.addEventListener('input', ()=>{ state.settings.unitWeights[el.dataset.uw] = parseFloat(el.value)||0; save(); schedule(); });
-    });
-    renderSpeedFields();
-    fillInputs();
-    $('sNow').addEventListener('input', schedule);
-  }
 
   // ---------- Zeitfenster ----------
   function renderWindows(){
     const box = $('winList'); box.innerHTML = '';
     state.settings.windows.forEach((w,i)=>{
       const row = document.createElement('div'); row.className='win';
-      row.innerHTML = `<input type="time" id="winS${i}" value="${w.start}" aria-label="Fenster ${i+1} von"> bis <input type="time" id="winE${i}" value="${w.end}" aria-label="Fenster ${i+1} bis"> <button type="button" class="ghost" aria-label="Fenster entfernen">Entfernen</button>`;
+      row.innerHTML = `<input type="time" id="winS${i}" value="${w.start}" aria-label="Zeitfenster ${i+1} von"> bis <input type="time" id="winE${i}" value="${w.end}" aria-label="Zeitfenster ${i+1} bis"> <button type="button" class="ghost" aria-label="Zeitfenster entfernen">Entfernen</button>`;
       const [a,b] = row.querySelectorAll('input');
       a.addEventListener('input', ()=>{ w.start = a.value; save(); schedule(); });
       b.addEventListener('input', ()=>{ w.end = b.value; save(); schedule(); });
       row.querySelector('button').addEventListener('click', ()=>{ state.settings.windows.splice(i,1); save(); renderWindows(); schedule(); });
       box.appendChild(row);
     });
-    if(!state.settings.windows.length){ const p = document.createElement('p'); p.className='hint'; p.textContent='Kein Fenster: Abschicken jederzeit erlaubt.'; box.appendChild(p); }
+    if(!state.settings.windows.length){ const p = document.createElement('p'); p.className='hint'; p.textContent='Kein Zeitfenster: Abschicken rund um die Uhr. Über Mitternacht geht in einer Zeile, z. B. 20:45 bis 01:00.'; box.appendChild(p); }
   }
   $('btnAddWin').addEventListener('click', ()=>{ state.settings.windows.push({start:'20:00', end:'01:00'}); save(); renderWindows(); schedule(); });
 
-  // ---------- Presets ----------
+  // ---------- Pakete ----------
   function renderPresets(){
-    const box = $('presetList'); box.innerHTML = '';
-    state.presets.forEach((p,i)=>{
-      const el = document.createElement('div'); el.className = 'preset' + (p.active===false?' off':'');
-      el.innerHTML = `<div class="head">
-          <input type="checkbox" id="pa${i}" ${p.active!==false?'checked':''} aria-label="Paket aktiv">
-          <input type="text" id="pn${i}" value="${p.name.replace(/"/g,'&quot;')}" aria-label="Paketname">
-          <button type="button" class="ghost" data-a="up" aria-label="nach oben" ${i===0?'disabled':''}>▲</button>
-          <button type="button" class="ghost" data-a="down" aria-label="nach unten" ${i===state.presets.length-1?'disabled':''}>▼</button>
-          <button type="button" class="ghost" data-a="del" aria-label="Paket löschen">✕</button></div>
-        <div class="units">${cols().filter(k=>k!=='knight' && k!=='snob').map(k=>`<label for="pu${i}_${k}">${L[k]}<input type="number" min="0" step="10" id="pu${i}_${k}" data-u="${k}" value="${p.units[k]||0}"></label>`).join('')}</div>`;
-      el.querySelector(`#pa${i}`).addEventListener('change', e=>{ p.active = e.target.checked; el.classList.toggle('off', !p.active); save(); schedule(); });
-      el.querySelector(`#pn${i}`).addEventListener('input', e=>{ p.name = e.target.value || 'Paket'; save(); schedule(); });
-      el.querySelectorAll('[data-u]').forEach(inp=> inp.addEventListener('input', ()=>{ p.units[inp.dataset.u] = parseInt(inp.value,10)||0; save(); schedule(); }));
-      el.querySelectorAll('[data-a]').forEach(b=> b.addEventListener('click', ()=>{
+    const U = pkUnits(), t = $('presetTable');
+    t.innerHTML = `<thead><tr><th title="aktiv"></th><th style="text-align:left">Name</th>${U.map(k=>`<th>${img(k)}</th>`).join('')}<th></th></tr></thead><tbody>` +
+      state.presets.map((p,i)=>`<tr class="${p.active===false?'off':''}">
+        <td><input type="checkbox" id="pa${i}" ${p.active!==false?'checked':''} aria-label="Paket ${esc(p.name)} aktiv"></td>
+        <td><input type="text" id="pn${i}" value="${esc(p.name)}" aria-label="Paketname"></td>
+        ${U.map(k=>`<td><input type="number" min="0" step="10" id="pu${i}_${k}" data-u="${k}" value="${p.units[k]||0}" aria-label="${L[k]} in ${esc(p.name)}"></td>`).join('')}
+        <td class="tools"><button type="button" class="ghost" data-a="up" title="nach oben (höhere Priorität)" aria-label="nach oben" ${i===0?'disabled':''}>↑</button><button type="button" class="ghost" data-a="del" title="Paket löschen" aria-label="Paket löschen">✕</button></td></tr>`).join('') + '</tbody>';
+    t.querySelectorAll('tbody tr').forEach((tr,i)=>{
+      const p = state.presets[i];
+      tr.querySelector(`#pa${i}`).addEventListener('change', e=>{ p.active = e.target.checked; tr.classList.toggle('off', !p.active); save(); schedule(); });
+      tr.querySelector(`#pn${i}`).addEventListener('input', e=>{ p.name = e.target.value || 'Paket'; save(); schedule(); });
+      tr.querySelectorAll('[data-u]').forEach(inp=> inp.addEventListener('input', ()=>{ p.units[inp.dataset.u] = parseInt(inp.value,10)||0; save(); schedule(); }));
+      tr.querySelectorAll('[data-a]').forEach(b=> b.addEventListener('click', ()=>{
         const a = b.dataset.a;
         if(a==='del') state.presets.splice(i,1);
         if(a==='up' && i>0) [state.presets[i-1], state.presets[i]] = [state.presets[i], state.presets[i-1]];
         if(a==='down' && i<state.presets.length-1) [state.presets[i+1], state.presets[i]] = [state.presets[i], state.presets[i+1]];
         save(); renderPresets(); schedule();
       }));
-      box.appendChild(el);
     });
   }
   $('btnAddPreset').addEventListener('click', ()=>{ state.presets.push({name:'Neues Paket', active:true, units:{spear:100}}); save(); renderPresets(); schedule(); });
   $('btnResetPresets').addEventListener('click', ()=>{ state.presets = JSON.parse(JSON.stringify(E.DEFAULT_PRESETS)); save(); renderPresets(); schedule(); });
 
-  // ---------- Berechnen ----------
-  function schedule(){ if(!result) return; clearTimeout(recalcT); recalcT = setTimeout(run, 350); }
-  ['inSos','inTroops','inPlan','inOut','inIds'].forEach(id=> $(id).addEventListener('input', ()=>{
-    if(id==='inSos'||id==='inTroops') demo = false;
-    clearTimeout(recalcT); recalcT = setTimeout(run, 500); }));
-
-  function run(){
-    const nowVal = $('sNow').value;
-    const settings = demo ? Object.assign({}, state.settings, DEMO_SETTINGS) : state.settings;
-    const input = { sos:$('inSos').value, troops:$('inTroops').value, plan:$('inPlan').value, outgoing:$('inOut').value,
-      ids: (demo ? DEMO_IDS : idText) + '\n' + $('inIds').value, presets: state.presets, settings,
-      now: nowVal ? new Date(nowVal).getTime() : null };
-    try{ result = E.plan(input); }
-    catch(err){ $('warnings').innerHTML = `<p>Berechnung fehlgeschlagen: ${esc(err.message)}. Prüfe die eingefügten Texte.</p>`; return; }
-    render();
-  }
-  $('btnCalc').addEventListener('click', run);
-  $('btnDemo').addEventListener('click', ()=>{
-    demo = true;
-    $('inSos').value = $('demoSos').textContent.trim(); $('inTroops').value = $('demoTroops').textContent.trim(); $('inPlan').value = ''; $('inOut').value = ''; $('sNow').value = '';
-    run();
-  });
-
-  const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const STATUS_TXT = {tab:'neu getabbt', existing:'schon unterwegs oder im Plan', nopkg:'Pakete aufgebraucht', window:'nur ausserhalb Zeitfenster', unreachable:'kein Dorf erreicht es', past:'vorbei / zu knapp', invalid:'Lücke zu klein', bunker:'Bunker, nicht getabbt'};
-
-  function render(){
-    const r = result, F = E.fmtTime;
-    const sos = r.targets, incs = sos.reduce((a,t)=>a+t.attacks.length,0);
-    $('psSos').textContent = sos.length ? `${sos.length} Dörfer · ${incs} Incs · ${r.slots.length} Lücken in Wellen` : 'nichts erkannt';
-    $('psTroops').textContent = r.villages.length ? `${r.villages.length} eigene Dörfer${r.now ? '' : ''}` : 'nichts erkannt';
-    const outHits = r.slots.filter(s=>s.existing && s.existing.kind==='unterwegs').length;
-    $('psOut').textContent = r.outgoing.length ? `${r.outgoing.length} Unterstützungen gelesen, ${outHits} davon in Tab-Lücken` : ($('inOut').value.trim() ? 'keine Befehle erkannt' : '–');
-    $('psPlan').textContent = r.existing.rows.length ? `${r.existing.rows.length} Planzeilen gelesen` : (($('inPlan').value.trim()) ? 'keine gültigen Zeilen' : '–');
-    $('stamp').textContent = `Referenz ${F(r.now)} · ${r.nowSource}`;
-    $('nowInfo').textContent = `Aktuell gerechnet mit ${F(r.now)} (${r.nowSource}).`;
-
-    const cnt = st => r.slots.filter(s=>s.status===st).length;
-    const reachable = r.slots.filter(s=>['tab','existing','nopkg','window','unreachable'].includes(s.status)).length;
-    const nBunker = sos.filter(t=>t.bunker).length;
-    const pkTotal = r.packages.groups.reduce((a,g)=>a+g.count,0), pkUsed = r.tabs.length;
-    const villagesCovered = new Set(r.slots.filter(s=>s.status==='tab'||s.status==='existing').map(s=>s.target)).size;
-    $('kpis').innerHTML = [
-      ['Neue Tabs', r.tabs.length], ['Lücken abgedeckt', `${cnt('tab')+cnt('existing')}/${reachable}`],
-      ['Dörfer abgedeckt', `${villagesCovered}/${sos.length - nBunker}`], ['Pakete genutzt', `${pkUsed}/${pkTotal}`],
-      ['Nächster Abschick', r.tabs.length ? F(r.tabs[0].send).slice(-8) : '–']
-    ].map(([k,v])=>`<div class="kpi"><span>${k}</span><strong>${v}</strong></div>`).join('');
-    $('warnings').innerHTML = r.warnings.map(w=>`<p>${esc(w)}</p>`).join('');
-    $('demoBanner').hidden = !demo;
-
-    // Abdeckung je Dorf, sortiert nach Anzahl Incs
-    const rows = sos.slice().sort((a,b)=>b.attacks.length-a.attacks.length).map(t=>{
-      const sl = r.slots.filter(s=>s.target===t.coord);
-      let cells = '', lastWave = -1;
-      sl.forEach(s=>{
-        if(lastWave>=0 && s.wave!==lastWave) cells += '<i class="wave" aria-hidden="true"></i>';
-        lastWave = s.wave;
-        const p = s.parts||{};
-        cells += `<i class="s-${s.status}" title="${F(s.arrival)} · Lücke ${Math.round(s.gapSec)} s · ${STATUS_TXT[s.status]} · Wert ${s.score.toFixed(2)}${p.tf>1?' · Bedrohung ×'+p.tf:''}"></i>`;
-      });
-      const covered = sl.filter(s=>s.status==='tab'||s.status==='existing').length;
-      const deff = t.bunker ? `<span class="chip exist">Bunker · ${t.foreign.toLocaleString('de-CH')} fremd</span>` : t.defPower==null ? '' : t.defPower < 50000 ? '<span class="chip bad">Deff schwach</span>' : t.defPower < 300000 ? '<span class="chip warn">Deff mittel</span>' : '<span class="chip ok">Deff stark</span>';
-      return `<div class="covrow"><span class="c">${t.coord}</span>
-        <span class="meta">${t.attacks.length} Incs · ${t.waves.length} Welle${t.waves.length>1?'n':''}<br>${covered}/${sl.length} getabbt ${t.wall!=null?'· Wall '+t.wall:''}<br>${deff}</span>
-        <div class="strip" aria-label="Lücken von ${t.coord}">${cells || '<span class="hint">keine Lücken</span>'}</div></div>`;
-    });
-    $('coverage').innerHTML = rows.join('') || '<p class="empty">Keine angegriffenen Dörfer erkannt.</p>';
-
-    // Plan
-    const tb = $('planTable').querySelector('tbody');
-    tb.innerHTML = r.tabs.map((t,i)=>`<tr data-send="${t.send}">
-        <td class="t">${F(t.send)}<span class="cd" id="cd${i}"></span></td>
-        <td class="t">${t.src}</td><td class="t">${t.tgt}</td><td class="t">${F(t.arrival)}</td>
-        <td>${esc(t.preset)}</td><td class="num">${E.fmtDur(t.tsec)}</td><td class="num">${t.score.toFixed(2)}</td>
-        <td>${r.ids.byCoord[t.src]&&r.ids.byCoord[t.tgt] ? `<a href="${E.placeUrl(r,t)}" target="_blank" rel="noopener">öffnen</a>` : '<span class="chip bad">ID fehlt</span>'}</td></tr>`).join('')
-      || `<tr><td colspan="8" class="empty">Keine neuen Tabs möglich. Prüfe Zeitfenster, Vorlauf und Pakete.</td></tr>`;
-    $('planInfo').textContent = r.tabs.length ? `${r.tabs.length} Befehle, sortiert nach Abschickzeit` : '';
-    tick(); clearInterval(timer); timer = setInterval(tick, 1000);
-
-    // Pakete je Dorf
-    const names = r.packages.presetNames;
-    $('pkTable').querySelector('thead').innerHTML = `<tr><th>Dorf</th>${names.map(n=>`<th>${esc(n)}</th>`).join('')}<th>Genutzt</th></tr>`;
-    $('pkTable').querySelector('tbody').innerHTML = r.packages.perVillage.filter(p=>p.counts.some(c=>c)).map(p=>{
-      const used = r.packages.groups.filter(g=>g.coord===p.coord).reduce((a,g)=>a+g.used,0), tot = p.counts.reduce((a,b)=>a+b,0);
-      return `<tr><td class="t">${p.coord}</td>${p.counts.map(c=>`<td class="num">${c||'·'}</td>`).join('')}<td class="num">${used}/${tot}</td></tr>`;
-    }).join('') || `<tr><td class="empty">Kein Dorf hat genug Truppen für ein aktives Paket.</td></tr>`;
-    showExport(exportTab);
-  }
-
-  // Countdown – relativ zur Referenzzeit (im Testmodus läuft die Uhr ab der Serverzeit)
-  let startedAt = Date.now();
-  function tick(){
-    if(!result) return;
-    const live = result.now + (Date.now() - startedAt);
-    document.querySelectorAll('#planTable tbody tr[data-send]').forEach((tr,i)=>{
-      const d = (+tr.dataset.send - live)/1000, cd = tr.querySelector('.cd');
-      tr.classList.toggle('gone', d < 0); tr.classList.toggle('due-now', d >= 0 && d < 300); tr.classList.toggle('due-soon', d >= 300 && d < 1200);
-      if(cd) cd.textContent = d < 0 ? 'vorbei' : 'in ' + E.fmtDur(d);
-    });
-  }
-  const _run = run; run = function(){ startedAt = Date.now(); _run(); };
-  $('btnCalc').removeEventListener('click', _run); $('btnCalc').addEventListener('click', ()=>run());
-
-  // ---------- Export ----------
-  const HINTS = {
-    ds: r=>`${(E.exportDS(r).match(/\n/g)||[]).length + (r.tabs.length?1:0)} Zeilen für den Import im DS-Ultimate-Angriffsplaner. Bei bestehendem Plan nur neue Zeilen.`,
-    open: ()=>'Lücken, die deine Dörfer nicht abdecken. Zum Posten im Stammesforum, nach Dorf gruppiert.',
-    full: ()=>'Alle neuen Tabs als Forum-Tabelle mit Versammlungsplatz-Link.',
-    pk: ()=>'Paketaufteilung je Dorf, als Text.'
-  };
-  function showExport(x){
-    exportTab = x;
-    document.querySelectorAll('#exportTabs button').forEach(b=> b.setAttribute('aria-selected', String(b.dataset.x===x)));
-    if(!result){ $('exportText').value=''; $('exportHint').textContent=''; return; }
-    $('exportText').value = x==='ds' ? E.exportDS(result) : x==='open' ? E.exportOpenBB(result) : x==='full' ? E.exportFullBB(result) : E.exportPackages(result);
-    $('exportHint').textContent = HINTS[x](result);
-    $('copyInfo').textContent = '';
-  }
-  document.querySelectorAll('#exportTabs button').forEach(b=> b.addEventListener('click', ()=>showExport(b.dataset.x)));
-  $('btnCopy').addEventListener('click', ()=>{
-    const ta = $('exportText');
-    const fallback = ()=>{ ta.focus(); ta.select(); $('copyInfo').textContent = 'Markiert – mit Strg+C kopieren.'; };
-    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(()=>{ $('copyInfo').textContent = 'Kopiert.'; }, fallback);
-    else fallback();
-  });
-
-  // ---------- Dorf-IDs & Weltdaten ----------
+  // ---------- Welt & Dorf-IDs ----------
   const idKey = ()=> 'tabbenplaner_ids_' + state.settings.world;
+  function currentWorld(){ return worlds && worlds.find(w=>w.id===state.settings.world); }
   function setIds(text, source){
     const parsed = E.parseVillageIds(text), n = Object.keys(parsed.byCoord).length;
     if(!n) return false;
@@ -1553,101 +1066,237 @@ Desktop-Version
     showIdInfo(); return true;
   }
   function showIdInfo(){
-    const n = idText ? idText.split('\n').length : 0;
-    const txt = n ? `${n.toLocaleString('de-CH')} Dorf-IDs für ${state.settings.world} (${idSource})` : `Keine Dorf-IDs für ${state.settings.world}: village.txt unter „Welt & Export“ laden, sonst fehlen die DS-Ultimate-Zeilen.`;
-    $('psIds').textContent = 'Dorf-IDs: ' + (n ? n.toLocaleString('de-CH') + ' (' + idSource + ')' : 'fehlen');
-    $('idInfo').textContent = txt;
+    const n = idText ? idText.split('\n').length : 0, el = $('psIds');
+    if(!n && !state.settings.worldChosen && !hasData()){ el.textContent = ''; return; }
+    el.className = 'status ' + (n ? 'idle' : 'bad');
+    el.textContent = n ? `Dorf-IDs ${state.settings.world}: ${n.toLocaleString('de-CH')} (${idSource})` : `Dorf-IDs für ${state.settings.world} fehlen: Welt wählen oder unter „Welt & Export“ village.txt hochladen.`;
   }
-  function currentWorld(){ return worlds && worlds.find(w=>w.id===state.settings.world); }
   function loadIds(){
     idText = ''; idSource = '';
-    try{ const c = JSON.parse(localStorage.getItem(idKey())||'null'); if(c && c.text){ idText = c.text; idSource = c.source + ', ' + new Date(c.at).toLocaleDateString('de-CH'); } }catch(e){}
+    try{ const c = JSON.parse(localStorage.getItem(idKey())||'null'); if(c && c.text){ idText = c.text; idSource = c.source; } }catch(e){}
     showIdInfo();
-    if(!window.fetch) return;
     const w = currentWorld();
-    if(w){
-      fetch(`worlds/${w.id}/village.txt`, {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject())
-        .then(t=>{ if(setIds(t, `Weltdaten vom ${fmtDate(w.updated)}`)) schedule(); })
-        .catch(()=>{ $('idInfo').textContent = `Dorfliste von ${w.id} nicht abrufbar. village.txt bitte hochladen.`; });
-      return;
-    }
-    // Alte Einrichtung: village.txt und unit_info.xml direkt neben der Seite
-    fetch('village.txt', {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject()).then(t=>{ if(setIds(t, 'Server, aktuell')) schedule(); }).catch(()=>{});
-    fetch('unit_info.xml', {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject()).then(x=>{
-      const sp = E.parseUnitInfo(x); if(!sp) return;
-      Object.assign(state.settings, {speeds: sp, unitSpeed:1, worldSpeed:1, speedSource:'unit_info.xml vom Server'});
-      cols().forEach(k=>{ const el = $('spd_'+k); if(el) el.value = sp[k]; });
-      $('sUnit').value = 1; $('sSpeed').value = 1; updateWorld(); schedule();
-    }).catch(()=>{});
+    if(!w || !window.fetch) return;
+    fetch(`worlds/${w.id}/village.txt`, {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject())
+      .then(t=>{ if(setIds(t, `Stand ${fmtDate(w.updated)}`)) schedule(); }).catch(()=>{});
   }
-  const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '?' : d.toLocaleString('de-CH', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); };
-  const nf = n => String(n).replace('.', ',');
   function applyWorld(id, opts){
     const w = worlds && worlds.find(x=>x.id===id); if(!w) return;
     const changed = state.settings.world !== w.id || !state.settings.worldChosen;
     Object.assign(state.settings, { world:w.id, units:w.units.filter(k=>k!=='militia'), speeds:Object.assign({}, E.BASE_SPEED, w.speeds),
-      unitSpeed:1, worldSpeed:1, defValues:w.def, millis:!!w.millis, speedSource:`Weltdaten ${w.id} vom ${fmtDate(w.updated)}`, worldChosen:true });
-    if(changed) state.settings.landOffsetSec = w.millis ? 1 : 0; // mit Millisekunden lieber 1 s hinter den Inc
-    save();
-    renderSpeedFields(); fillInputs(); renderPresets(); updateWorld(); loadIds();
-    $('worldSel').value = w.id; $('welcome').hidden = true;
+      unitSpeed:1, worldSpeed:1, defValues:w.def, millis:!!w.millis, speedSource:`Weltdaten ${w.id}, Stand ${fmtDate(w.updated)}`, worldChosen:true });
+    if(changed) state.settings.landOffsetSec = w.millis ? 1 : 0;
+    save(); renderSpeedFields(); fillInputs(); renderPresets(); updateWorld(); loadIds();
+    $('worldSel').value = w.id; $('welcome').hidden = true; $('worldPick').hidden = false;
     try{ const u = new URL(location.href); u.searchParams.set('w', w.id); history.replaceState(null, '', u); }catch(e){}
     if(!(opts && opts.quiet)) schedule();
   }
   function fillWorldSelect(sel){
-    const groups = {};
+    const groups = {}, NAMES = {de:'Welten', dec:'Classic', dep:'Casual', des:'Speed'};
     worlds.forEach(w=>{ const g = w.id.replace(/\d.*$/, ''); (groups[g] = groups[g] || []).push(w); });
-    const NAMES = {de:'Welten', dec:'Classic', dep:'Casual', des:'Speed'};
     sel.innerHTML = Object.entries(groups).map(([g, list])=>`<optgroup label="${NAMES[g] || g}">${list.map(w=>
       `<option value="${w.id}">${w.id} · ${nf(w.speed)} × ${nf(w.unitSpeed)}${w.archer?' · Bogen':''}${w.knight?' · Pala':''}</option>`).join('')}</optgroup>`).join('');
   }
   function loadWorldList(){
-    if(!window.fetch) return Promise.resolve();
-    return fetch('worlds/index.json', {cache:'no-store'}).then(r=> r.ok ? r.json() : Promise.reject()).then(d=>{
-      if(!d || !Array.isArray(d.worlds) || !d.worlds.length) return;
+    if(!window.fetch){ updateSteps(); return; }
+    fetch('worlds/index.json', {cache:'no-store'}).then(r=> r.ok ? r.json() : Promise.reject()).then(d=>{
+      if(!d || !Array.isArray(d.worlds) || !d.worlds.length) throw 0;
       worlds = d.worlds;
       fillWorldSelect($('worldSel')); fillWorldSelect($('worldFirst'));
-      $('worldPick').hidden = false;
+      $('worldSel').value = state.settings.world;
       const param = new URLSearchParams(location.search).get('w');
       const pick = [param, state.settings.worldChosen ? state.settings.world : null].find(id=> id && worlds.some(w=>w.id===id));
-      if(pick) applyWorld(pick, {quiet:true});
+      if(pick){ applyWorld(pick, {quiet:true}); $('worldPick').hidden = false; }
       else { $('welcome').hidden = false; const def = worlds.find(w=>w.id===state.settings.world); if(def) $('worldFirst').value = def.id; }
-      updateWorld(); schedule();
-    }).catch(()=>{});
+      updateWorld(); schedule(true);
+    }).catch(()=>{ $('detWorld').open = !state.settings.speedSource; updateWorld(); });
   }
   $('worldSel').addEventListener('change', e=> applyWorld(e.target.value));
   $('btnWorldFirst').addEventListener('click', ()=> applyWorld($('worldFirst').value));
   function updateWorld(){
-    const w = state.settings.world;
-    $('worldTag').textContent = 'v2 · ' + w;
-    const cw = currentWorld();
-    $('worldInfo').textContent = cw ? `${cw.id} · Geschwindigkeit ${nf(cw.speed)} × ${nf(cw.unitSpeed)} · ${cw.millis ? 'mit' : 'ohne'} Millisekunden · ${cw.archer ? 'mit Bogen · ' : ''}${cw.knight ? 'mit Paladin · ' : ''}${Number(cw.villages).toLocaleString('de-CH')} Dörfer · Stand ${fmtDate(cw.updated)}` : '';
+    const cw = state.settings.worldChosen ? currentWorld() : null;
+    $('worldInfo').textContent = cw ? `${nf(cw.speed)} × ${nf(cw.unitSpeed)} · ${cw.millis ? 'mit' : 'ohne'} ms${cw.archer ? ' · Bogen' : ''}${cw.knight ? ' · Pala' : ''} · Stand ${fmtDate(cw.updated)}` :
+      (state.settings.speedSource ? `${state.settings.world} · manuell` : '');
     $('manualHint').hidden = !cw;
+    $('speedInfo').textContent = state.settings.speedSource ? `Laufzeiten: ${state.settings.speedSource}.` : 'Laufzeiten noch nicht bestätigt: Spiel- und Einheitengeschwindigkeit der Welt eintragen.';
     $('landHint').textContent = state.settings.millis
-      ? 'Welt mit Millisekunden: Die Millisekunde des Tabs ist nicht steuerbar. Deshalb landet er standardmässig 1 s nach dem früheren Inc.'
-      : 'Welt ohne Millisekunden: Der Tab landet auf der Sekunde des früheren Incs. Befehle derselben Sekunde werden in Abschickreihenfolge verrechnet, der später abgeschickte Tab kommt also nach diesem Inc an.';
-    $('vtUrl').textContent = `https://${w}.die-staemme.de/map/village.txt`;
-    $('speedInfo').textContent = state.settings.speedSource ? `Laufzeiten: ${state.settings.speedSource}.` : 'Laufzeiten noch nicht bestätigt: Werte der Welt eintragen (Spielgeschw. × Einheitengeschw. wirken zusammen).';
+      ? 'Welt mit Millisekunden: Die Millisekunde des Tabs ist nicht steuerbar, darum landet er standardmässig 1 s nach dem früheren Inc.'
+      : 'Welt ohne Millisekunden: Der Tab landet auf der Sekunde des früheren Incs. Befehle derselben Sekunde laufen in Abschickreihenfolge, der Tab kommt also nach diesem Inc an.';
+    updateSteps();
   }
   $('fileVillage').addEventListener('change', e=>{
     const f = e.target.files[0]; if(!f) return;
     const rd = new FileReader();
-    rd.onload = ()=>{ if(!setIds(rd.result, 'hochgeladen')) $('idInfo').textContent = 'Datei nicht erkannt. Erwartet wird village.txt im Format id,name,x,y,…'; else schedule(); };
+    rd.onload = ()=>{ if(!setIds(rd.result, 'hochgeladen')) { const el = $('psIds'); el.className='status bad'; el.textContent = 'Datei nicht erkannt. Erwartet wird village.txt (id,name,x,y,…).'; } else schedule(); };
     rd.readAsText(f);
   });
-  // Einstellungen teilen
-  $('btnShareOut').addEventListener('click', ()=>{ $('inShare').value = JSON.stringify(state); $('inShare').select(); $('shareInfo').textContent = 'Text markiert, kopieren und weitergeben.'; });
+  $('btnShareOut').addEventListener('click', ()=> copy(JSON.stringify({settings: state.settings, presets: state.presets}), 'Einstellungen kopiert. Dem Duali schicken, der fügt sie hier ein.', $('shareInfo')));
   $('btnShareIn').addEventListener('click', ()=>{
     let d; try{ d = JSON.parse($('inShare').value); }catch(e){}
-    if(!d || !d.settings || !Array.isArray(d.presets)){ $('shareInfo').textContent = 'Text nicht erkannt. Erwartet wird der Text aus „Meine Einstellungen als Text“.'; return; }
-    state.settings = Object.assign(JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), d.settings);
+    if(!d || !d.settings || !Array.isArray(d.presets)){ $('shareInfo').textContent = 'Text nicht erkannt. Erwartet wird der Text aus „Meine Einstellungen kopieren“.'; return; }
+    const keepWorld = { world: state.settings.world, worldChosen: state.settings.worldChosen };
+    state.settings = Object.assign(JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), d.settings, keepWorld);
     state.presets = d.presets; save();
-    fillInputs(); renderWindows(); renderPresets(); updateWorld(); loadIds(); schedule();
-    $('shareInfo').textContent = 'Übernommen.';
+    if(currentWorld()) applyWorld(state.settings.world, {quiet:true});
+    fillInputs(); renderWindows(); renderPresets(); updateWorld(); schedule();
+    $('shareInfo').textContent = 'Übernommen.'; $('inShare').value = '';
   });
 
-  load(); bindSettings(); renderWindows(); renderPresets(); showExport('ds'); updateWorld(); loadIds(); loadWorldList();
-  // Startzustand: Testdaten anzeigen, damit sichtbar ist, was das Tool macht
-  $('btnDemo').click();
+  // ---------- Eingaben & Rechnen ----------
+  const hasData = ()=> $('inSos').value.trim() && $('inTroops').value.trim();
+  function schedule(now){ clearTimeout(recalcT); recalcT = setTimeout(run, now===true ? 0 : 300); }
+  ['inSos','inTroops','inPlan','inOut','inIds'].forEach(id=> $(id).addEventListener('input', ()=> schedule()));
+
+  function run(){
+    if(!hasData()){ result = null; showParseOnly(); render(); return; }
+    const nowVal = $('sNow').value;
+    const input = { sos:$('inSos').value, troops:$('inTroops').value, plan:$('inPlan').value, outgoing:$('inOut').value,
+      ids: idText + '\n' + $('inIds').value, presets: state.presets, settings: state.settings, now: nowVal ? new Date(nowVal).getTime() : null };
+    try{ result = E.plan(input); result.startedAt = Date.now(); }
+    catch(err){ result = null; $('warnings').innerHTML = `<p class="bad">Berechnung fehlgeschlagen: ${esc(err.message)}</p>`; return; }
+    render();
+  }
+
+  // Erkennungsstatus auch ohne vollständige Daten anzeigen
+  function setStatus(id, ok, text){ const el = $(id); el.className = 'status ' + (ok===null ? 'idle' : ok ? 'ok' : 'bad'); el.textContent = text; }
+  function showParseOnly(){
+    const sosT = $('inSos').value.trim(), trT = $('inTroops').value.trim();
+    if(!sosT) setStatus('psSos', null, 'Noch leer');
+    else { const t = E.parseSOS(sosT, cols()); const n = t.reduce((a,v)=>a+v.attacks.length,0);
+      setStatus('psSos', t.length>0, t.length ? `✓ ${t.length} Dörfer · ${n} Incs` : 'Nichts erkannt. Erwartet wird der BB-Code der SOS-Anfrage mit [b]Dorf:[/b] und Ankunftszeit.'); }
+    if(!trT) setStatus('psTroops', null, 'Noch leer');
+    else { const v = E.parseTroops(trT, cols()).villages;
+      setStatus('psTroops', v.length>0, v.length ? `✓ ${v.length} eigene Dörfer` : 'Nichts erkannt. Bitte die ganze Seite Übersichten → Truppen kopieren (Zeilen mit „eigene“).'); }
+    updateSteps();
+  }
+  function updateSteps(){
+    const t = (id, done)=> $(id).classList.toggle('done', !!done);
+    t('stWorld', state.settings.worldChosen || state.settings.speedSource === 'manuell');
+    t('stSos', /^✓/.test($('psSos').textContent)); t('stTroops', /^✓/.test($('psTroops').textContent));
+    t('stDone', result && result.tabs.length);
+  }
+
+  const STATUS_TXT = {tab:'neu getabbt', existing:'unterwegs / im AP', nopkg:'Pakete aufgebraucht', window:'nur ausserhalb deiner Zeiten', unreachable:'kein Dorf rechtzeitig', past:'vorbei / zu knapp', invalid:'Lücke zu klein', bunker:'Bunker, ausgelassen'};
+  const sentKey = t => `${t.src}>${t.tgt}@${t.arrival}`;
+  const pkHtml = u => `<span class="pk">${E.ALL.filter(k=>u[k]>0).map(k=>`<span>${img(k)}${u[k]}</span>`).join('')}</span>`;
+
+  function render(){
+    const r = result;
+    $('empty').hidden = !!r; $('result').hidden = !r;
+    clearInterval(timer);
+    if(!r){ updateSteps(); return; }
+    const sos = r.targets, incs = sos.reduce((a,t)=>a+t.attacks.length,0);
+    setStatus('psSos', sos.length>0, sos.length ? `✓ ${sos.length} Dörfer · ${incs} Incs · ${r.slots.length} Lücken in Wellen` : 'Nichts erkannt. Erwartet wird der BB-Code der SOS-Anfrage mit [b]Dorf:[/b] und Ankunftszeit.');
+    setStatus('psTroops', r.villages.length>0, r.villages.length ? `✓ ${r.villages.length} eigene Dörfer` : 'Nichts erkannt. Bitte die ganze Seite Übersichten → Truppen kopieren.');
+    const outHits = r.slots.filter(s=>s.existing && s.existing.kind==='unterwegs').length;
+    setStatus('psOut', $('inOut').value.trim() ? r.outgoing.length>0 : null, $('inOut').value.trim() ? (r.outgoing.length ? `✓ ${r.outgoing.length} UTs, ${outHits} davon in Tab-Lücken` : 'Keine Unterstützungen erkannt.') : '');
+    setStatus('psPlan', $('inPlan').value.trim() ? r.existing.rows.length>0 : null, $('inPlan').value.trim() ? (r.existing.rows.length ? `✓ ${r.existing.rows.length} AP-Einträge` : 'Keine gültigen AP-Zeilen erkannt.') : '');
+    const nOpt = (r.outgoing.length ? 1 : 0) + (r.existing.rows.length ? 1 : 0);
+    $('optState').textContent = nOpt ? `· ${nOpt} eingefügt` : '';
+    $('stamp').textContent = `Stand ${F(r.now)}`;
+
+    const cnt = st => r.slots.filter(s=>s.status===st).length;
+    const reach = r.slots.filter(s=>['tab','existing','nopkg','window','unreachable'].includes(s.status)).length;
+    const nB = sos.filter(t=>t.bunker).length;
+    const vCov = new Set(r.slots.filter(s=>s.status==='tab'||s.status==='existing').map(s=>s.target)).size;
+    const pkTotal = r.packages.groups.reduce((a,g)=>a+g.count,0);
+    $('kpis').innerHTML = [
+      ['Neue Tabs', r.tabs.length], ['Lücken abgedeckt', `${cnt('tab')+cnt('existing')}<small>/${reach}</small>`],
+      ['Dörfer abgedeckt', `${vCov}<small>/${sos.length-nB}</small>`], ['Pakete genutzt', `${r.tabs.length}<small>/${pkTotal}</small>`],
+      ['Nächster Tab', `<span id="nextCd">–</span>`]
+    ].map(([k,v])=>`<div class="kpi"><span>${k}</span><strong>${v}</strong></div>`).join('');
+    const warns = r.warnings;
+    $('warnings').innerHTML = warns.map(w=>`<p>${esc(w)}</p>`).join('') +
+      (!r.tabs.length && sos.length ? `<p>Kein Tab möglich. Häufige Gründe: Abschickzeiten zu eng, Vorlauf zu gross, oder kein Dorf hat genug Truppen für ein aktives Paket.</p>` : '');
+    $('cpDs').disabled = !r.tabs.length; $('cpFull').disabled = !r.tabs.length;
+    $('nPlan').textContent = r.tabs.length; $('nCov').textContent = sos.length; $('nPk').textContent = pkTotal;
+
+    // Abschickplan
+    const tb = $('planTable').querySelector('tbody');
+    tb.innerHTML = r.tabs.map((t,i)=>{
+      const k = sentKey(t), ok = r.ids.byCoord[t.src] && r.ids.byCoord[t.tgt];
+      return `<tr data-send="${t.send}" data-key="${esc(k)}" class="${sent[k]?'sent':''}" title="Lücke ${Math.round(t.slot.gapSec)} s · Prio ${t.score.toFixed(2)}">
+        <td class="c-chk"><input type="checkbox" ${sent[k]?'checked':''} aria-label="abgeschickt"></td>
+        <td class="t send c-send">${F(t.send)}<span class="cd"></span></td>
+        <td class="t c-from">${t.src}</td><td class="t c-to">${t.tgt}</td><td class="t c-arr">${F(t.arrival)}</td>
+        <td class="c-pk">${pkHtml(t.units)}</td><td class="t c-run">${E.fmtDur(t.tsec)}</td>
+        <td class="c-go">${ok ? `<a class="go" href="${E.placeUrl(r,t)}" target="_blank" rel="noopener">Platz ↗</a>` : '<span class="chip bad">ID fehlt</span>'}</td></tr>`;
+    }).join('') || `<tr><td colspan="8" class="empty-row">Keine neuen Tabs.</td></tr>`;
+    tb.querySelectorAll('input[type=checkbox]').forEach(cb=> cb.addEventListener('change', ()=>{
+      const tr = cb.closest('tr'), k = tr.dataset.key;
+      if(cb.checked) sent[k] = Date.now(); else delete sent[k];
+      saveSent(); tr.classList.toggle('sent', cb.checked); applyHideSent(); sentInfo();
+    }));
+    applyHideSent(); sentInfo();
+    tick(); timer = setInterval(tick, 1000);
+
+    // Dörfer
+    $('coverage').innerHTML = sos.slice().sort((a,b)=>b.attacks.length-a.attacks.length).map(t=>{
+      const sl = r.slots.filter(s=>s.target===t.coord);
+      let cells = '', lw = -1;
+      sl.forEach(s=>{ if(lw>=0 && s.wave!==lw) cells += '<i class="wave" aria-hidden="true"></i>'; lw = s.wave;
+        cells += `<i class="s-${s.status}" title="${F(s.arrival)} · Lücke ${Math.round(s.gapSec)} s · ${STATUS_TXT[s.status]}${s.parts && s.parts.tf>1?' · Bedrohung ×'+s.parts.tf:''}"></i>`; });
+      const cov = sl.filter(s=>s.status==='tab'||s.status==='existing').length;
+      const tag = t.bunker ? `<span class="chip exist">Bunker · ${t.foreign.toLocaleString('de-CH')} fremd</span>` : t.defPower==null ? '' : t.defPower < 50000 ? '<span class="chip bad">Deff schwach</span>' : t.defPower < 300000 ? '<span class="chip warn">Deff mittel</span>' : '<span class="chip ok">Deff stark</span>';
+      return `<div class="covrow"><span class="c">${t.coord}</span>
+        <span class="meta"><span>${t.attacks.length} Incs · ${t.waves.length} Welle${t.waves.length>1?'n':''}${t.wall!=null?' · Wall '+t.wall:''}</span><span>${cov}/${sl.length} Lücken abgedeckt</span>${tag}</span>
+        <div class="strip" aria-label="Lücken von ${t.coord}">${cells || '<span class="hint">keine Lücken</span>'}</div></div>`;
+    }).join('');
+
+    // Pakete
+    const names = r.packages.presetNames, act = state.presets.filter(p=>p.active!==false);
+    $('pkTable').querySelector('thead').innerHTML = `<tr><th>Dorf</th>${names.map((n,i)=>`<th>${esc(n)}</th>`).join('')}<th>genutzt</th></tr>`;
+    $('pkTable').querySelector('tbody').innerHTML = r.packages.perVillage.filter(p=>p.counts.some(c=>c)).map(p=>{
+      const used = r.packages.groups.filter(g=>g.coord===p.coord).reduce((a,g)=>a+g.used,0), tot = p.counts.reduce((a,b)=>a+b,0);
+      return `<tr><td class="t">${p.coord}</td>${p.counts.map(c=>`<td class="t">${c||'·'}</td>`).join('')}<td class="t">${used}/${tot}</td></tr>`;
+    }).join('') || `<tr><td class="empty-row" colspan="${names.length+2}">Kein Dorf hat genug Truppen für ein aktives Paket. Pakete verkleinern oder Reserve senken.</td></tr>`;
+    showTxt();
+    updateSteps();
+  }
+
+  function applyHideSent(){ const h = $('hideSent').checked; document.querySelectorAll('#planTable tbody tr.sent').forEach(tr=> tr.hidden = h); }
+  function sentInfo(){ if(!result) return; const n = result.tabs.filter(t=>sent[sentKey(t)]).length; $('sentInfo').textContent = n ? `${n} von ${result.tabs.length} abgeschickt` : ''; }
+  $('hideSent').addEventListener('change', applyHideSent);
+
+  function tick(){
+    if(!result) return;
+    const live = result.now + (Date.now() - result.startedAt);
+    let next = null;
+    document.querySelectorAll('#planTable tbody tr[data-send]').forEach(tr=>{
+      const d = (+tr.dataset.send - live)/1000, cd = tr.querySelector('.cd');
+      tr.classList.toggle('gone', d < 0); tr.classList.toggle('due-now', d >= 0 && d < 300); tr.classList.toggle('due-soon', d >= 300 && d < 1200);
+      if(cd) cd.textContent = d < 0 ? 'vorbei' : 'in ' + E.fmtDur(d);
+      if(d >= 0 && !tr.classList.contains('sent') && (next===null || d < next)) next = d;
+    });
+    const n = $('nextCd'); if(n) n.textContent = next===null ? '–' : E.fmtDur(next);
+  }
+
+  // ---------- Tabs & Export ----------
+  document.querySelectorAll('#resTabs button').forEach(b=> b.addEventListener('click', ()=>{
+    document.querySelectorAll('#resTabs button').forEach(x=> x.setAttribute('aria-selected', String(x===b)));
+    document.querySelectorAll('[data-pane]').forEach(p=> p.hidden = p.dataset.pane !== b.dataset.t);
+  }));
+  const TEXT = { ds: r=>E.exportDS(r), open: r=>E.exportOpenBB(r), full: r=>E.exportFullBB(r), pk: r=>E.exportPackages(r) };
+  function showTxt(){ $('txtOut').value = result ? TEXT[$('txtSel').value](result) : ''; }
+  $('txtSel').addEventListener('change', showTxt);
+  let toastT = null;
+  function copy(text, msg, el){
+    el = el || $('toast');
+    const done = ()=>{ el.textContent = msg; clearTimeout(toastT); toastT = setTimeout(()=> el.textContent = '', 6000); };
+    const fallback = ()=>{ const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+      let ok = false; try{ ok = document.execCommand('copy'); }catch(e){} ta.remove();
+      if(ok) done(); else { el.textContent = 'Kopieren blockiert. Text unter „Texte“ markieren und kopieren.'; } };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  }
+  $('cpDs').addEventListener('click', ()=>{ const t = E.exportDS(result), n = t ? t.split('\n').length : 0;
+    copy(t, `${n} Befehle kopiert. Im DS-Ultimate-Angriffsplaner importieren.`); });
+  $('cpOpen').addEventListener('click', ()=> copy(E.exportOpenBB(result), 'Offene Lücken kopiert, bereit fürs Stammesforum.'));
+  $('cpFull').addEventListener('click', ()=> copy(E.exportFullBB(result), 'Tabliste kopiert, bereit fürs Stammesforum.'));
+  $('cpTxt').addEventListener('click', ()=> copy($('txtOut').value, 'Kopiert.'));
+
+  // ---------- Start ----------
+  load(); bindSettings(); renderSpeedFields(); fillInputs(); renderWindows(); renderPresets(); updateWorld(); loadIds(); render(); loadWorldList();
 })();
 </script>
+</body>
+</html>
