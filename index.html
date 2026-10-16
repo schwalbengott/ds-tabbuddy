@@ -1,0 +1,1573 @@
+<title>Tabben-Planer de254</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Kriegstisch – links Eingaben & Strategie, rechts Lagebild und Plan; schmal untereinander */
+:root{
+  --bg:#eceee9; --panel:#f7f8f4; --sunk:#e2e5de; --line:#c9cec3;
+  --fg:#1c2622; --muted:#5d6a63; --accent:#1f5f7a; --accent-ink:#ffffff;
+  --ok:#2f7d45; --ok-soft:#cfe6d4; --warn:#a86a10; --warn-soft:#f2dfbd;
+  --bad:#a63a2a; --bad-soft:#f0d2cc; --idle:#b9c0b6; --exist:#5a6fb0; --exist-soft:#d6dcf0;
+  --f-display:"Alegreya SC", Georgia, serif;
+  --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a18; --panel:#1b2320; --sunk:#111614; --line:#2e3a35;
+  --fg:#e3e8e2; --muted:#93a39a; --accent:#5fa9c6; --accent-ink:#0d1a20;
+  --ok:#6cc183; --ok-soft:#1f3a28; --warn:#e0a54a; --warn-soft:#3d2f17;
+  --bad:#e27a68; --bad-soft:#40211b; --idle:#46524c; --exist:#8fa3e3; --exist-soft:#252d48; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a18; --panel:#1b2320; --sunk:#111614; --line:#2e3a35;
+  --fg:#e3e8e2; --muted:#93a39a; --accent:#5fa9c6; --accent-ink:#0d1a20;
+  --ok:#6cc183; --ok-soft:#1f3a28; --warn:#e0a54a; --warn-soft:#3d2f17;
+  --bad:#e27a68; --bad-soft:#40211b; --idle:#46524c; --exist:#8fa3e3; --exist-soft:#252d48; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--fg); font-family:var(--f-body); font-size:15px; line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:20px 48px}
+.wrap{max-width:1320px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
+header.top{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px 20px}
+h1{font-family:var(--f-display); font-weight:700; font-size:1.7rem; margin:0; letter-spacing:.01em; text-wrap:balance}
+h1 small{font-family:var(--f-mono); font-size:.75rem; font-weight:400; color:var(--muted); margin-left:8px; letter-spacing:0}
+h2{font-family:var(--f-display); font-weight:500; font-size:1.15rem; margin:0; text-wrap:balance}
+.lead{color:var(--muted); margin:0; max-width:70ch}
+.grid{display:grid; grid-template-columns:minmax(0, 420px) minmax(0, 1fr); gap:18px; align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex; flex-direction:column; gap:14px; min-width:0}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0}
+.step{display:flex; align-items:baseline; gap:10px}
+.step b{font-family:var(--f-mono); font-size:.72rem; color:var(--accent-ink); background:var(--accent); border-radius:3px; padding:1px 6px}
+details.panel{gap:0}
+details.panel > summary{cursor:pointer; list-style:none; display:flex; align-items:baseline; gap:10px}
+details.panel > summary::-webkit-details-marker{display:none}
+details.panel > summary::after{content:"＋"; margin-left:auto; color:var(--muted); font-family:var(--f-mono)}
+details.panel[open] > summary::after{content:"－"}
+details.panel[open] > summary{margin-bottom:10px}
+.inner{display:flex; flex-direction:column; gap:10px}
+label{font-size:.85rem; color:var(--muted); display:flex; flex-direction:column; gap:3px}
+.hint{font-size:.8rem; color:var(--muted); margin:0}
+textarea, input, select{font:inherit; color:var(--fg); background:var(--sunk); border:1px solid var(--line); border-radius:4px; padding:6px 8px; min-width:0}
+textarea{font-family:var(--f-mono); font-size:.72rem; min-height:92px; resize:vertical; width:100%}
+input[type=number]{font-family:var(--f-mono); font-size:.85rem; width:100%}
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.fields{display:grid; grid-template-columns:repeat(auto-fill, minmax(118px, 1fr)); gap:8px}
+button{font:inherit; font-weight:500; border-radius:4px; border:1px solid var(--line); background:var(--panel); color:var(--fg); padding:6px 12px; cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:700; padding:9px 18px}
+button.ghost{background:transparent; padding:3px 8px; font-size:.85rem}
+.chip{display:inline-flex; align-items:center; gap:5px; font-size:.78rem; padding:1px 8px; border-radius:99px; background:var(--sunk); color:var(--muted); white-space:nowrap}
+.chip.ok{background:var(--ok-soft); color:var(--ok)} .chip.warn{background:var(--warn-soft); color:var(--warn)} .chip.bad{background:var(--bad-soft); color:var(--bad)} .chip.exist{background:var(--exist-soft); color:var(--exist)}
+.parsed{font-size:.8rem; color:var(--muted); font-family:var(--f-mono)}
+/* Presets */
+.preset{border:1px solid var(--line); border-radius:4px; padding:8px; display:flex; flex-direction:column; gap:6px; background:var(--panel)}
+.preset .head{display:flex; gap:6px; align-items:center}
+.preset .head input[type=text]{flex:1; font-weight:700}
+.preset .units{display:grid; grid-template-columns:repeat(auto-fill, minmax(66px,1fr)); gap:5px}
+.preset .units label{font-size:.72rem}
+.preset.off{opacity:.55}
+/* Gewichte */
+.weight{display:grid; grid-template-columns:minmax(0,1fr) 120px 34px; gap:8px; align-items:center; font-size:.88rem}
+.weight output{font-family:var(--f-mono); font-size:.8rem; text-align:right}
+.weight input{accent-color:var(--accent)}
+.win{display:flex; gap:6px; align-items:center}
+.win input{width:auto}
+/* Ergebnis */
+.kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(130px,1fr)); gap:8px}
+.kpi{background:var(--sunk); border-radius:4px; padding:8px 10px}
+.kpi span{display:block; font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+.kpi strong{font-family:var(--f-mono); font-size:1.3rem; font-variant-numeric:tabular-nums}
+.warnings{display:flex; flex-direction:column; gap:4px}
+.warnings p{margin:0; font-size:.85rem; color:var(--warn); background:var(--warn-soft); padding:5px 9px; border-radius:4px}
+.legend{display:flex; flex-wrap:wrap; gap:12px; font-size:.78rem; color:var(--muted)}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px}
+.cov{display:flex; flex-direction:column; gap:6px}
+.covrow{display:grid; grid-template-columns:86px 120px minmax(0,1fr); gap:10px; align-items:center}
+@media (max-width:560px){.covrow{grid-template-columns:86px minmax(0,1fr)} .covrow .meta{display:none}}
+.covrow .c{font-family:var(--f-mono); font-size:.85rem; font-weight:600}
+.covrow .meta{font-size:.75rem; color:var(--muted); line-height:1.2}
+.strip{display:flex; flex-wrap:wrap; gap:2px; align-items:center}
+.strip i{width:12px; height:16px; border-radius:2px; background:var(--idle)}
+.strip i.wave{width:2px; background:transparent; border-left:2px dotted var(--line); margin:0 3px}
+.s-tab{background:var(--ok)!important} .s-existing{background:var(--exist)!important} .s-nopkg{background:var(--warn)!important}
+.s-bunker{background:var(--exist)!important; opacity:.35}
+.s-window{background:var(--warn)!important; opacity:.55} .s-unreachable{background:var(--bad)!important; opacity:.75} .s-past,.s-invalid{background:var(--idle)!important; opacity:.5}
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:4px}
+table{border-collapse:collapse; width:100%; font-size:.84rem}
+th, td{padding:5px 8px; text-align:left; white-space:nowrap; border-bottom:1px solid var(--line)}
+th{font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:500; background:var(--sunk); position:sticky; top:0}
+td.num, td.t{font-family:var(--f-mono); font-variant-numeric:tabular-nums; font-size:.8rem}
+tr.due-now td:first-child{box-shadow:inset 3px 0 0 var(--bad)} tr.due-soon td:first-child{box-shadow:inset 3px 0 0 var(--warn)} tr.gone{opacity:.45}
+.cd{font-family:var(--f-mono); font-size:.75rem; color:var(--muted); margin-left:6px}
+tr.due-now .cd{color:var(--bad); font-weight:600} tr.due-soon .cd{color:var(--warn)}
+a{color:var(--accent)}
+.tabs{display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid var(--line)}
+.tabs button{border:none; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted); padding:6px 10px}
+.tabs button[aria-selected="true"]{color:var(--fg); border-bottom-color:var(--accent); font-weight:700}
+#exportText{min-height:200px}
+.banner{font-size:.85rem; background:var(--exist-soft); color:var(--exist); padding:6px 10px; border-radius:4px; margin:0}
+input[type=file]{font-size:.8rem; padding:4px}
+.empty{color:var(--muted); font-size:.9rem; margin:0}
+.pk{font-family:var(--f-mono); font-size:.78rem}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Tabben-Planer <small id="worldTag">v2</small></h1>
+      <p class="lead">Kleine Deff-Pakete exakt in die Lücken zwischen eingehenden Angriffen legen, um Kattasplits abzufangen.</p>
+    </div>
+    <div class="row">
+      <button id="btnDemo" type="button">Testdaten 02.08. laden</button>
+      <button id="btnCalc" class="primary" type="button">Berechnen</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Linke Spalte: Eingaben -->
+    <div class="col">
+      <section class="panel">
+        <div class="step"><b>1</b><h2>Lage einlesen</h2></div>
+        <label for="inSos">Eingehende Angriffsübersicht (BB-Code)
+          <textarea id="inSos" spellcheck="false" placeholder="[b]Dorf:[/b] [coord]489|532[/coord] …"></textarea></label>
+        <div class="parsed" id="psSos">–</div>
+        <label for="inTroops">Truppenübersicht (ganze Seite kopieren)
+          <textarea id="inTroops" spellcheck="false" placeholder="-=01=- (461|598) K54  eigene  98 100 …  Befehle"></textarea></label>
+        <div class="parsed" id="psTroops">–</div>
+        <label for="inOut">Laufende Unterstützungen, optional (Übersichten → Befehle → Unterstützung, ganze Seite)
+          <textarea id="inOut" spellcheck="false" style="min-height:64px" placeholder="Unterstützung für … (489|532) K54   001 … (461|598) K54   morgen um 05:15:33   200 200 0 …"></textarea></label>
+        <div class="parsed" id="psOut">–</div>
+        <label for="inPlan">Bestehender DS-Ultimate-Plan, optional (Export-Zeilen)
+          <textarea id="inPlan" spellcheck="false" placeholder="16442&amp;885&amp;heavy&amp;1785746505000&amp;6&amp;false&amp;false&amp;spear=/…"></textarea></label>
+        <p class="hint">Lücken mit laufender Unterstützung oder einem Plan-Eintrag gelten als abgedeckt. Laufende Befehle zeigen, was schon raus ist; der Plan deckt ab, was noch nicht abgeschickt wurde (diese Truppen gelten als verplant). Der Export enthält nur neue Zeilen.</p>
+        <div class="parsed" id="psPlan">–</div>
+        <div class="parsed" id="psIds">Dorf-IDs: –</div>
+      </section>
+
+      <section class="panel">
+        <div class="step"><b>2</b><h2>Pakete</h2></div>
+        <p class="hint">Truppen (Zeile „eigene“) werden pro Dorf reihum in diese Pakete aufgeteilt, in der angezeigten Reihenfolge.</p>
+        <div id="presetList" class="inner"></div>
+        <div class="row">
+          <button id="btnAddPreset" type="button">Paket hinzufügen</button>
+          <button id="btnResetPresets" type="button" class="ghost">Standard wiederherstellen</button>
+        </div>
+        <label for="sReserve">Reserve je Dorf in % (bleibt für spätere Incs stehen)
+          <input id="sReserve" type="number" min="0" max="95" step="5" data-k="reservePct"></label>
+        <label class="row" style="flex-direction:row; gap:6px" for="sExcl"><input id="sExcl" type="checkbox" data-k="excludeAttacked"> Angegriffene Dörfer nicht als Quelle nutzen</label>
+      </section>
+
+      <details class="panel" id="detStrategy" open>
+        <summary><span class="step"><b>3</b><h2>Strategie</h2></span></summary>
+        <div class="inner">
+          <p class="hint">Welche Lücken zuerst? Jede Lücke bekommt einen Wert, die Zuteilung maximiert die Summe über alle Pakete.</p>
+          <div class="weight"><span>Viele Incs aufs Dorf</span><input id="wCount" type="range" min="0" max="3" step="0.25" data-k="wCount"><output for="wCount"></output></div>
+          <div class="weight"><span>Kurze Lücke</span><input id="wShort" type="range" min="0" max="3" step="0.25" data-k="wShort"><output for="wShort"></output></div>
+          <div class="weight"><span>Mitte der Welle</span><input id="wCenter" type="range" min="0" max="3" step="0.25" data-k="wCenter"><output for="wCenter"></output></div>
+          <div class="weight"><span>Schwache Verteidigung</span><input id="wWeak" type="range" min="0" max="3" step="0.25" data-k="wWeak"><output for="wWeak"></output></div>
+          <div class="weight"><span>Jedes Dorf mind. 1 Tab</span><input id="wSpread" type="range" min="0" max="5" step="0.5" data-k="wSpread"><output for="wSpread"></output></div>
+          <label class="row" style="flex-direction:row; gap:6px; align-items:center" for="sBunker"><input id="sBunker" type="checkbox" data-k="skipBunker"> Bunker nicht tabben ab</label>
+          <label for="sBunkerMin">fremden Deff-Einheiten (Speer + Schwert + SKav im Dorf minus eigene)
+            <input id="sBunkerMin" type="number" min="0" step="500" data-k="bunkerMin"></label>
+          <p class="hint">Faktor nach Einheit des nächsten Incs (laut Befehlsname):</p>
+          <div class="fields">
+            <label for="uwAg">AG<input id="uwAg" type="number" step="0.1" min="0" data-uw="ag"></label>
+            <label for="uwKata">Katapult<input id="uwKata" type="number" step="0.1" min="0" data-uw="kata"></label>
+            <label for="uwRamme">Ramme<input id="uwRamme" type="number" step="0.1" min="0" data-uw="ramme"></label>
+            <label for="uwSpy">Späher<input id="uwSpy" type="number" step="0.1" min="0" data-uw="spaeher"></label>
+            <label for="uwOther">Sonstige<input id="uwOther" type="number" step="0.1" min="0" data-uw="other"></label>
+          </div>
+          <label for="sThreats">Bedrohungsliste aus Berichten: Spieler oder Herkunftsdorf, optional =Faktor (Standard 2)
+            <textarea id="sThreats" spellcheck="false" style="min-height:64px" data-k="threats" placeholder="DobbyFreeElf=2&#10;565|546=3"></textarea></label>
+        </div>
+      </details>
+
+      <details class="panel" id="detLimits">
+        <summary><span class="step"><b>4</b><h2>Limits &amp; Zeiten</h2></span></summary>
+        <div class="inner">
+          <div class="fields">
+            <label for="sMaxV">Max. Tabs je Dorf (0 = ∞)<input id="sMaxV" type="number" min="0" data-k="maxPerVillage"></label>
+            <label for="sMaxT">Max. Tabs gesamt (0 = ∞)<input id="sMaxT" type="number" min="0" data-k="maxTotal"></label>
+            <label for="sMaxH">Max. Laufzeit h (0 = ∞)<input id="sMaxH" type="number" min="0" step="0.5" data-k="maxTravelH"></label>
+            <label for="sLead">Vorlauf in Min.<input id="sLead" type="number" min="0" data-k="leadMin"></label>
+            <label for="sWave">Neue Welle ab Pause (Min.)<input id="sWave" type="number" min="1" data-k="waveBreakMin"></label>
+            <label for="sMinGap">Min. Lücke (s)<input id="sMinGap" type="number" min="0" data-k="minGapSec"></label>
+            <label for="sLand">Landung + s nach Inc<input id="sLand" type="number" min="0" data-k="landOffsetSec"></label>
+          </div>
+          <p class="hint">Welt ohne Millisekunden: Der Tab landet auf der Sekunde des früheren Incs. Befehle derselben Sekunde werden in Abschickreihenfolge verrechnet, der später abgeschickte Tab kommt also nach diesem Inc an.</p>
+          <p class="hint">Abschickfenster (täglich). Fenster über Mitternacht in einer Zeile, z.&nbsp;B. 20:45–01:00. Keine Zeile = jederzeit.</p>
+          <div id="winList" class="inner"></div>
+          <div class="row">
+            <button id="btnAddWin" type="button">Fenster hinzufügen</button>
+            <label for="sBuf" style="flex-direction:row; align-items:center; gap:6px">Puffer Min. <input id="sBuf" type="number" min="0" style="width:70px" data-k="windowBufferMin"></label>
+          </div>
+          <label for="sNow">Referenzzeit (leer = automatisch)
+            <input id="sNow" type="datetime-local" step="1"></label>
+          <p class="hint" id="nowInfo"></p>
+        </div>
+      </details>
+
+      <details class="panel" id="detWorld">
+        <summary><span class="step"><b>5</b><h2>Welt &amp; Export</h2></span></summary>
+        <div class="inner">
+          <div class="fields">
+            <label for="sWorld">Welt<input id="sWorld" type="text" data-k="world"></label>
+            <label for="sUnit">Einheitengeschw.<input id="sUnit" type="number" step="0.01" data-k="unitSpeed"></label>
+            <label for="sSpeed">Spielgeschw.<input id="sSpeed" type="number" step="0.01" data-k="worldSpeed"></label>
+            <label for="sType">AP-Typ<select id="sType" data-k="typeCode">
+              <option value="5">5 Unterstützung</option><option value="6">6 Stand Unterstützung</option>
+              <option value="7">7 Schnelle Unterstützung</option><option value="8">8 Fake Unterstützung</option></select></label>
+          </div>
+          <p class="hint">Minuten pro Feld bei Geschwindigkeit 1:</p>
+          <div class="fields" id="speedFields"></div>
+          <p class="hint" id="speedInfo"></p>
+          <label for="fileVillage">Dorfliste der Welt (village.txt von <span id="vtUrl">…/map/village.txt</span>)
+            <input id="fileVillage" type="file" accept=".txt,text/plain"></label>
+          <p class="hint" id="idInfo">Wird im Browser gespeichert. Auf dem eigenen Server lädt das Tool die Datei automatisch.</p>
+          <label for="inIds">Einzelne Dorf-IDs ergänzen (x|y=id)
+            <textarea id="inIds" spellcheck="false" style="min-height:52px" placeholder="489|532=885"></textarea></label>
+          <label for="inShare">Einstellungen teilen (für Dualis)
+            <textarea id="inShare" spellcheck="false" style="min-height:52px" placeholder="Hier den Einstellungs-Text einfügen"></textarea></label>
+          <div class="row"><button id="btnShareOut" type="button">Meine Einstellungen als Text</button><button id="btnShareIn" type="button">Text übernehmen</button><span class="parsed" id="shareInfo"></span></div>
+        </div>
+      </details>
+    </div>
+
+    <!-- Rechte Spalte: Ergebnis -->
+    <div class="col">
+      <section class="panel" id="resultPanel">
+        <div class="step"><h2>Lagebild</h2><span class="parsed" id="stamp"></span></div>
+        <div class="kpis" id="kpis"></div>
+        <p class="banner" id="demoBanner" hidden>Testdaten vom 02.08. (Welt de254, eigene Weltwerte und IDs). Eigene Daten einfügen beendet den Testmodus.</p>
+        <div class="warnings" id="warnings"></div>
+        <div class="legend">
+          <span><i class="s-tab"></i>neu getabbt</span><span><i class="s-existing"></i>schon unterwegs oder im Plan</span>
+          <span><i class="s-nopkg"></i>erreichbar, Pakete aufgebraucht</span><span><i class="s-window"></i>nur ausserhalb Zeitfenster</span>
+          <span><i class="s-unreachable"></i>kein Dorf erreicht es</span><span><i class="s-past"></i>vorbei / zu knapp</span><span><i class="s-bunker"></i>Bunker, nicht getabbt</span>
+        </div>
+        <div class="cov" id="coverage"><p class="empty">Noch keine Berechnung. Daten einfügen oder Testdaten laden.</p></div>
+      </section>
+
+      <section class="panel">
+        <div class="step"><h2>Abschickplan</h2><span class="parsed" id="planInfo"></span></div>
+        <div class="tablewrap"><table id="planTable">
+          <thead><tr><th>Abschicken</th><th>Von</th><th>Nach</th><th>Ankunft</th><th>Paket</th><th>Laufzeit</th><th>Wert</th><th>Platz</th></tr></thead>
+          <tbody></tbody></table></div>
+      </section>
+
+      <section class="panel">
+        <div class="step"><h2>Export</h2></div>
+        <div class="tabs" role="tablist" id="exportTabs">
+          <button type="button" role="tab" data-x="ds" aria-selected="true">DS-Ultimate</button>
+          <button type="button" role="tab" data-x="open" aria-selected="false">Offene Lücken (Team)</button>
+          <button type="button" role="tab" data-x="full" aria-selected="false">Tabliste (Forum)</button>
+          <button type="button" role="tab" data-x="pk" aria-selected="false">Pakete</button>
+        </div>
+        <p class="hint" id="exportHint"></p>
+        <textarea id="exportText" spellcheck="false" readonly></textarea>
+        <div class="row"><button id="btnCopy" type="button">Kopieren</button><span class="parsed" id="copyInfo"></span></div>
+      </section>
+
+      <section class="panel">
+        <div class="step"><h2>Pakete je Dorf</h2></div>
+        <div class="tablewrap"><table id="pkTable"><thead></thead><tbody></tbody></table></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script type="text/plain" id="demoIds">491|530=7
+485|531=65
+482|522=97
+455|523=292
+486|532=398
+483|535=424
+489|530=446
+489|532=885
+490|531=1263
+488|533=1284
+488|532=1637
+494|525=1982
+489|531=2433
+482|545=2724
+493|525=3970
+477|551=4482
+478|550=4763
+457|568=6689
+447|573=8603
+476|593=9695
+459|591=9812
+458|586=9880
+457|590=10149
+451|581=10160
+450|588=10165
+457|592=10169
+461|598=10183
+443|579=10412
+451|575=10540
+443|581=10762
+444|588=10850
+443|580=11533
+453|595=11857
+449|595=12676
+449|600=13024
+461|604=13872
+443|601=15261
+438|598=15853
+441|602=16172
+457|609=16348
+440|603=16442
+446|607=16464
+454|586=20487</script>
+<script type="text/plain" id="demoSos">[b]Dorf:[/b] [coord]491|530[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  49  49  1  0  0  0  1  0  0 
+
+    [command]attack[/command] Ramme | return 04.08 18:49:38 | sent 31.07 18:38:24 [coord]485|626[/coord] --> Ankunftszeit: 02.08.26 18:44:01 [player]Sammyt[/player]
+    [command]attack[/command] Ramme | return 04.08 17:23:06 | sent 01.08 22:46:54 [coord]541|574[/coord] --> Ankunftszeit: 03.08.26 08:05:00 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 04.08 17:16:49 | sent 01.08 22:54:37 [coord]484|596[/coord] --> Ankunftszeit: 03.08.26 08:05:43 [player]Zudoda[/player]
+    [command]attack[/command] Ramme | return 04.08 18:17:03 | sent 01.08 22:06:03 [coord]559|535[/coord] --> Ankunftszeit: 03.08.26 08:11:33 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 04.08 07:17:49 | sent 02.08 10:31:11 [coord]532|548[/coord] --> Ankunftszeit: 03.08.26 08:54:30 [player]Sozioforreal[/player]
+    [command]attack[/command] Ramme | return 05.08 19:35:15 | sent 31.07 22:24:45 [coord]604|561[/coord] --> Ankunftszeit: 03.08.26 09:00:00 [player]Die Farmtiere[/player]
+    [command]attack[/command] Ramme | return 04.08 07:00:34 | sent 02.08 11:00:34 [coord]491|574[/coord] --> Ankunftszeit: 03.08.26 09:00:34 [player]Berittener Koala[/player]
+    [command]attack[/command] Ramme | return 05.08 09:53:13 | sent 01.08 12:04:23 [coord]567|585[/coord] --> Ankunftszeit: 03.08.26 10:58:48 [player]Sybill Proxyspawney[/player]
+    [command]attack[/command] Ramme | return 05.08 10:05:52 | sent 01.08 12:09:22 [coord]531|615[/coord] --> Ankunftszeit: 03.08.26 11:07:37 [player]TeslaTekin[/player]
+    [command]attack[/command] Ramme | return 06.08 08:36:48 | sent 01.08 10:30:26 [coord]598|480[/coord] --> Ankunftszeit: 03.08.26 21:33:37 [player]daymio[/player]
+	
+[b]Dorf:[/b] [coord]489|532[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  964  962  0  123  750  0  10  154  0 
+
+    [command]attack[/command] Ramme | return 05.08 17:43:01 | sent 31.07 20:17:25 [coord]606|542[/coord] --> Ankunftszeit: 03.08.26 07:00:13 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 04.08 17:00:58 | sent 01.08 22:47:48 [coord]541|573[/coord] --> Ankunftszeit: 03.08.26 07:54:23 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 04.08 17:54:01 | sent 01.08 22:09:29 [coord]499|599[/coord] --> Ankunftszeit: 03.08.26 08:01:45 [player]Berittener Koala[/player]
+    [command]attack[/command] Ramme | return 04.08 18:21:48 | sent 01.08 21:46:14 [coord]557|541[/coord] --> Ankunftszeit: 03.08.26 08:04:01 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 04.08 17:19:16 | sent 01.08 22:57:04 [coord]482|598[/coord] --> Ankunftszeit: 03.08.26 08:08:10 [player]Zudoda[/player]
+    [command]attack[/command] Ramme | return 04.08 17:37:32 | sent 01.08 22:46:30 [coord]514|594[/coord] --> Ankunftszeit: 03.08.26 08:12:01 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 06.08 01:37:26 | sent 31.07 16:22:34 [coord]616|556[/coord] --> Ankunftszeit: 03.08.26 09:00:00 [player]All Eyez on Me[/player]
+    [command]attack[/command] Ramme | return 04.08 07:36:23 | sent 02.08 10:29:03 [coord]533|542[/coord] --> Ankunftszeit: 03.08.26 09:02:43 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 04.08 20:37:24 | sent 01.08 21:33:36 [coord]558|549[/coord] --> Ankunftszeit: 03.08.26 09:05:30 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 06.08 09:22:22 | sent 31.07 12:01:08 [coord]598|442[/coord] --> Ankunftszeit: 03.08.26 10:41:45 [player]HerrDerAlimente[/player]
+    [command]attack[/command] Ramme | return 05.08 12:45:15 | sent 01.08 09:07:47 [coord]583|499[/coord] --> Ankunftszeit: 03.08.26 10:56:31 [player]Tild[/player]
+    [command]attack[/command] Ramme | return 07.08 06:06:35 | sent 02.08 05:20:29 [coord]598|480[/coord] --> Ankunftszeit: 04.08.26 17:43:32 [player]daymio[/player]
+	
+[b]Dorf:[/b] [coord]443|581[/coord]
+[b]Wallstufe:[/b] 15
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  47  50  2685  50  1366  100  150  51  0 
+
+    [command]attack[/command] Ramme | return 05.08 06:46:57 | sent 01.08 08:37:43 [coord]530|617[/coord] --> Ankunftszeit: 03.08.26 07:42:20 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 05.08 22:12:13 | sent 31.07 18:13:41 [coord]564|554[/coord] --> Ankunftszeit: 03.08.26 08:12:57 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 05.08 22:53:10 | sent 31.07 18:08:46 [coord]565|555[/coord] --> Ankunftszeit: 03.08.26 08:30:58 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 05.08 18:57:35 | sent 31.07 22:07:05 [coord]559|595[/coord] --> Ankunftszeit: 03.08.26 08:32:20 [player]All Eyez on Me[/player]
+    [command]attack[/command] Ramme | return 04.08 03:34:34 | sent 02.08 14:12:46 [coord]479|591[/coord] --> Ankunftszeit: 03.08.26 08:53:40 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 04.08 02:38:32 | sent 02.08 15:17:12 [coord]478|576[/coord] --> Ankunftszeit: 03.08.26 08:57:52 [player]Berittener Koala[/player]
+    [command]attack[/command] Ramme | return 05.08 22:21:44 | sent 31.07 20:21:30 [coord]565|580[/coord] --> Ankunftszeit: 03.08.26 09:21:37 [player]All Eyez on Me[/player]
+	
+[b]Dorf:[/b] [coord]454|586[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  301  51  2374  45  1206  0  133  46  0 
+
+    [command]attack[/command] Ramme | return 05.08 21:18:43 | sent 31.07 18:13:51 [coord]572|551[/coord] --> Ankunftszeit: 03.08.26 07:46:17 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 06.08 06:41:31 | sent 31.07 12:14:23 [coord]567|506[/coord] --> Ankunftszeit: 03.08.26 09:27:57 [player]Beer*[/player]
+    [command]attack[/command] Ramme | return 05.08 05:38:32 | sent 01.08 14:33:02 [coord]526|537[/coord] --> Ankunftszeit: 03.08.26 10:05:47 [player]HerrDerAlimente[/player]
+	
+[b]Dorf:[/b] [coord]488|533[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  397  25  0  48  245  3  5  138  0 
+
+    [command]attack[/command] Ramme | return 04.08 16:53:39 | sent 01.08 22:49:33 [coord]539|575[/coord] --> Ankunftszeit: 03.08.26 07:51:36 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 04.08 17:38:24 | sent 01.08 22:16:32 [coord]495|600[/coord] --> Ankunftszeit: 03.08.26 07:57:28 [player]Zudoda[/player]
+    [command]attack[/command] Ramme | return 04.08 18:18:46 | sent 01.08 21:57:38 [coord]552|557[/coord] --> Ankunftszeit: 03.08.26 08:08:12 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 04.08 19:58:46 | sent 01.08 21:05:58 [coord]508|601[/coord] --> Ankunftszeit: 03.08.26 08:32:22 [player]TeslaTekin[/player]
+    [command]attack[/command] Ramme | return 04.08 18:39:32 | sent 01.08 22:45:42 [coord]499|600[/coord] --> Ankunftszeit: 03.08.26 08:42:37 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 04.08 22:56:22 | sent 01.08 18:42:10 [coord]564|539[/coord] --> Ankunftszeit: 03.08.26 08:49:16 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 05.08 19:48:55 | sent 31.07 22:11:05 [coord]602|562[/coord] --> Ankunftszeit: 03.08.26 09:00:00 [player]Die Farmtiere[/player]
+    [command]attack[/command] Ramme | return 04.08 20:11:24 | sent 01.08 21:58:34 [coord]557|546[/coord] --> Ankunftszeit: 03.08.26 09:04:59 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 06.08 00:29:05 | sent 31.07 20:13:37 [coord]612|525[/coord] --> Ankunftszeit: 03.08.26 10:21:21 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 05.08 10:40:29 | sent 01.08 11:05:13 [coord]559|597[/coord] --> Ankunftszeit: 03.08.26 10:52:51 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 06.08 08:10:06 | sent 01.08 10:31:14 [coord]592|478[/coord] --> Ankunftszeit: 03.08.26 21:20:40 [player]daymio[/player]
+	
+[b]Dorf:[/b] [coord]478|550[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  519  25  187  84  333  20  35  187  0 
+
+    [command]attack[/command] Ramme | return 04.08 23:17:52 | sent 01.08 16:39:10 [coord]555|534[/coord] --> Ankunftszeit: 03.08.26 07:58:31 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 06.08 00:56:09 | sent 31.07 17:09:17 [coord]576|468[/coord] --> Ankunftszeit: 03.08.26 09:02:43 [player]Beer*[/player]
+    [command]attack[/command] Ramme | return 05.08 03:45:01 | sent 01.08 16:32:01 [coord]561|544[/coord] --> Ankunftszeit: 03.08.26 10:08:31 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 04.08 09:55:18 | sent 02.08 10:39:24 [coord]525|555[/coord] --> Ankunftszeit: 03.08.26 10:17:21 [player]Sozioforreal[/player]
+    [command]attack[/command] Ramme | return 06.08 04:47:09 | sent 31.07 16:24:13 [coord]608|575[/coord] --> Ankunftszeit: 03.08.26 10:35:41 [player]All Eyez on Me[/player]
+    [command]attack[/command] Ramme | return 05.08 04:12:49 | sent 01.08 16:58:45 [coord]546|598[/coord] --> Ankunftszeit: 03.08.26 10:35:47 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 06.08 00:39:58 | sent 31.07 20:54:16 [coord]599|524[/coord] --> Ankunftszeit: 03.08.26 10:47:07 [player]Beer*[/player]
+    [command]attack[/command] Ramme | return 05.08 01:38:17 | sent 02.08 11:01:41 [coord]534|578[/coord] --> Ankunftszeit: 03.08.26 18:19:59 [player]Sozioforreal[/player]
+	
+[b]Dorf:[/b] [coord]490|531[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  467  171  0  1217  817  0  5  118  0 
+
+    [command]attack[/command] Ramme | return 04.08 17:04:16 | sent 01.08 22:52:56 [coord]485|597[/coord] --> Ankunftszeit: 03.08.26 07:58:36 [player]Zudoda[/player]
+    [command]attack[/command] Ramme | return 04.08 17:25:09 | sent 01.08 22:55:43 [coord]476|596[/coord] --> Ankunftszeit: 03.08.26 08:10:26 [player]Zudoda[/player]
+    [command]attack[/command] Ramme | return 04.08 08:37:48 | sent 02.08 12:01:54 [coord]523|561[/coord] --> Ankunftszeit: 03.08.26 10:19:51 [player]Belehr[/player]
+    [command]attack[/command] Ramme | return 05.08 05:30:13 | sent 01.08 15:10:23 [coord]568|568[/coord] --> Ankunftszeit: 03.08.26 10:20:18 [player]Zapzarap[/player]
+    [command]attack[/command] Ramme | return 04.08 08:38:48 | sent 02.08 12:02:54 [coord]523|561[/coord] --> Ankunftszeit: 03.08.26 10:20:51 [player]Belehr[/player]
+    [command]attack[/command] Ramme | return 04.08 10:39:18 | sent 02.08 10:03:16 [coord]529|560[/coord] --> Ankunftszeit: 03.08.26 10:21:17 [player]Sozioforreal[/player]
+    [command]attack[/command] Ramme | return 05.08 07:02:45 | sent 01.08 13:40:13 [coord]558|589[/coord] --> Ankunftszeit: 03.08.26 10:21:29 [player]Bumsebiene[/player]
+    [command]attack[/command] Ramme | return 05.08 07:19:41 | sent 01.08 13:27:21 [coord]564|582[/coord] --> Ankunftszeit: 03.08.26 10:23:31 [player]Sybill Proxyspawney[/player]
+    [command]attack[/command] Ramme | return 06.08 08:48:28 | sent 31.07 12:00:24 [coord]625|571[/coord] --> Ankunftszeit: 03.08.26 10:24:26 [player]All Eyez on Me[/player]
+    [command]attack[/command] Ramme | return 04.08 09:44:26 | sent 02.08 12:02:06 [coord]498|576[/coord] --> Ankunftszeit: 03.08.26 10:53:16 [player]Belehr[/player]
+    [command]attack[/command] Ramme | return 06.08 06:27:59 | sent 01.08 10:30:49 [coord]596|484[/coord] --> Ankunftszeit: 03.08.26 20:29:24 [player]daymio[/player]
+    [command]attack[/command] Ramme | return 07.08 10:14:40 | sent 02.08 05:20:12 [coord]599|470[/coord] --> Ankunftszeit: 04.08.26 19:47:26 [player]daymio[/player]
+	
+[b]Dorf:[/b] [coord]482|545[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  493  440  0  148  452  0  5  223  0 
+
+    [command]attack[/command] Ramme | return 04.08 23:27:10 | sent 01.08 16:32:06 [coord]560|557[/coord] --> Ankunftszeit: 03.08.26 07:59:38 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 05.08 02:39:22 | sent 01.08 15:39:00 [coord]565|546[/coord] --> Ankunftszeit: 03.08.26 09:09:11 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 05.08 03:18:27 | sent 01.08 16:18:05 [coord]565|546[/coord] --> Ankunftszeit: 03.08.26 09:48:16 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 06.08 03:20:57 | sent 31.07 16:20:03 [coord]613|547[/coord] --> Ankunftszeit: 03.08.26 09:50:30 [player]Die Farmtiere[/player]
+    [command]attack[/command] Ramme | return 06.08 03:28:04 | sent 31.07 16:27:50 [coord]613|544[/coord] --> Ankunftszeit: 03.08.26 09:57:57 [player]All Eyez on Me[/player]
+    [command]attack[/command] Ramme | return 05.08 13:21:47 | sent 01.08 07:03:35 [coord]561|610[/coord] --> Ankunftszeit: 03.08.26 10:12:41 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 05.08 05:27:07 | sent 01.08 15:02:45 [coord]561|510[/coord] --> Ankunftszeit: 03.08.26 10:14:56 [player]Beer*[/player]
+    [command]attack[/command] Ramme | return 05.08 05:31:36 | sent 01.08 14:59:36 [coord]530|617[/coord] --> Ankunftszeit: 03.08.26 10:15:36 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 04.08 03:22:26 | sent 02.08 17:10:08 [coord]473|578[/coord] --> Ankunftszeit: 03.08.26 10:16:17 [player]Berittener Koala[/player]
+    [command]attack[/command] Ramme | return 04.08 06:40:50 | sent 02.08 14:04:22 [coord]507|577[/coord] --> Ankunftszeit: 03.08.26 10:22:36 [player]Belehr[/player]
+    [command]attack[/command] Ramme | return 05.08 06:20:24 | sent 01.08 16:53:38 [coord]531|615[/coord] --> Ankunftszeit: 03.08.26 11:37:01 [player]TeslaTekin[/player]
+	
+[b]Dorf:[/b] [coord]438|598[/coord]
+[b]Wallstufe:[/b] 1
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  218  0  2923  0  1484  0  194  64  0 
+
+    [command]attack[/command] Ramme | return 05.08 18:30:52 | sent 31.07 21:30:36 [coord]549|561[/coord] --> Ankunftszeit: 03.08.26 08:00:44 [player]Zapzarap[/player]
+    [command]attack[/command] Ramme | return 05.08 22:56:22 | sent 31.07 17:32:24 [coord]544|531[/coord] --> Ankunftszeit: 03.08.26 08:14:23 [player]Quadrivium[/player]
+    [command]attack[/command] Ramme | return 04.08 17:46:20 | sent 01.08 22:49:56 [coord]503|614[/coord] --> Ankunftszeit: 03.08.26 08:18:08 [player]*Arbeiterritter*[/player]
+    [command]attack[/command] Ramme | return 06.08 00:21:25 | sent 31.07 20:15:23 [coord]562|593[/coord] --> Ankunftszeit: 03.08.26 10:18:24 [player]Zapzarap[/player]
+    [command]attack[/command] Ramme | return 06.08 00:32:46 | sent 31.07 20:31:34 [coord]543|532[/coord] --> Ankunftszeit: 03.08.26 10:32:10 [player]Quadrivium[/player]
+	
+[b]Dorf:[/b] [coord]493|525[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  463  0  0  52  500  0  5  250  0 
+
+    [command]attack[/command] Ramme | return 04.08 18:04:56 | sent 01.08 21:57:52 [coord]545|569[/coord] --> Ankunftszeit: 03.08.26 08:01:24 [player]Bumsebiene[/player]
+    [command]attack[/command] Ramme | return 04.08 23:41:52 | sent 01.08 16:32:22 [coord]564|560[/coord] --> Ankunftszeit: 03.08.26 08:07:07 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 04.08 23:03:19 | sent 01.08 20:43:29 [coord]566|539[/coord] --> Ankunftszeit: 03.08.26 09:53:24 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 04.08 10:26:09 | sent 02.08 10:03:45 [coord]535|549[/coord] --> Ankunftszeit: 03.08.26 10:14:57 [player]Sozioforreal[/player]
+    [command]attack[/command] Ramme | return 05.08 05:30:21 | sent 01.08 15:03:13 [coord]568|568[/coord] --> Ankunftszeit: 03.08.26 10:16:47 [player]Zapzarap[/player]
+    [command]attack[/command] Ramme | return 05.08 08:12:34 | sent 01.08 12:55:28 [coord]576|563[/coord] --> Ankunftszeit: 03.08.26 10:34:01 [player]Sybill Proxyspawney[/player]
+    [command]attack[/command] Ramme | return 05.08 10:09:13 | sent 01.08 12:09:13 [coord]493|619[/coord] --> Ankunftszeit: 03.08.26 11:09:13 [player]TeslaTekin[/player]
+    [command]attack[/command] Ramme | return 06.08 02:27:44 | sent 31.07 20:03:44 [coord]602|461[/coord] --> Ankunftszeit: 03.08.26 11:15:44 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 06.08 08:09:16 | sent 01.08 10:30:40 [coord]605|489[/coord] --> Ankunftszeit: 03.08.26 21:19:58 [player]daymio[/player]
+	
+[b]Dorf:[/b] [coord]488|532[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  17443  1009  0  61  120  5262  5  126  2 
+
+    [command]attack[/command] Ramme | return 04.08 18:04:44 | sent 01.08 21:59:00 geflext [coord]522|591[/coord] --> Ankunftszeit: 03.08.26 08:01:52 [player]Belehr[/player]
+    [command]attack[/command] Ramme | return 05.08 08:24:55 | sent 01.08 11:43:01 [coord]556|595[/coord] --> Ankunftszeit: 03.08.26 10:03:58 [player]Morimuh[/player]
+    [command]attack[/command] Ramme | return 05.08 23:59:54 | sent 31.07 20:12:14 [coord]611|518[/coord] --> Ankunftszeit: 03.08.26 10:06:04 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 05.08 11:30:11 | sent 01.08 09:05:45 [coord]548|610[/coord] --> Ankunftszeit: 03.08.26 10:17:58 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 05.08 01:03:59 | sent 01.08 19:32:31 [coord]527|599[/coord] --> Ankunftszeit: 03.08.26 10:18:15 [player]Belehr[/player]
+    [command]attack[/command] Ramme | return 04.08 03:40:12 | sent 02.08 17:00:00 [coord]507|561[/coord] --> Ankunftszeit: 03.08.26 10:20:06 [player]Berittener Koala[/player]
+    [command]attack[/command] Ramme | return 05.08 11:15:20 | sent 01.08 09:25:08 [coord]552|606[/coord] --> Ankunftszeit: 03.08.26 10:20:14 [player]Anabol[/player]
+    [command]attack[/command] Ramme | return 05.08 11:13:22 | sent 01.08 09:28:04 [coord]572|582[/coord] --> Ankunftszeit: 03.08.26 10:20:43 [player]Zapzarap[/player]
+    [command]attack[/command] Ramme | return 04.08 13:04:10 | sent 02.08 09:10:32 [coord]535|554[/coord] --> Ankunftszeit: 03.08.26 11:07:21 [player]Morimuh[/player]
+    [command]attack[/command] Ramme | return 05.08 10:06:39 | sent 01.08 12:21:59 [coord]566|480[/coord] --> Ankunftszeit: 03.08.26 11:14:19 [player]HerrDerAlimente[/player]
+	
+[b]Dorf:[/b] [coord]449|600[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  96  96  1321  81  774  25  128  108  0 
+
+    [command]attack[/command] Ramme | return 04.08 23:32:47 | sent 01.08 16:31:15 [coord]511|551[/coord] --> Ankunftszeit: 03.08.26 08:02:01 [player]DobbyFreeElf[/player]
+    [command]attack[/command] Ramme | return 05.08 19:19:19 | sent 31.07 22:04:59 [coord]565|583[/coord] --> Ankunftszeit: 03.08.26 08:42:09 [player]Die Farmtiere[/player]
+    [command]attack[/command] Ramme | return 06.08 04:48:04 | sent 31.07 14:15:54 [coord]581|574[/coord] --> Ankunftszeit: 03.08.26 09:31:59 [player]Die Farmtiere[/player]
+    [command]attack[/command] Ramme | return 06.08 18:02:30 | sent 31.07 12:11:54 [coord]571|513[/coord] --> Ankunftszeit: 03.08.26 15:07:12 [player]Beer*[/player]
+    [command]attack[/command] Ramme | return 05.08 09:32:20 | sent 01.08 22:23:18 [coord]532|605[/coord] --> Ankunftszeit: 03.08.26 15:57:49 [player]Anabol[/player]
+	
+[b]Dorf:[/b] [coord]443|580[/coord]
+[b]Wallstufe:[/b] 20
+[b]Zustimmung:[/b] 100
+
+[b]Verteidiger:[/b]  2897  268  0  91  338  726  5  175  0 
+
+    [command]attack[/command] Ramme | return 04.08 18:21:03 | sent 01.08 21:43:43 [coord]508|602[/coord] --> Ankunftszeit: 03.08.26 08:02:23 [player]TeslaTekin[/player]
+    [command]attack[/command] Ramme | return 05.08 02:57:50 | sent 01.08 14:54:16 [coord]514|625[/coord] --> Ankunftszeit: 03.08.26 08:56:03 [player]TeslaTekin[/player]
+    [command]attack[/command] Ramme | return 06.08 00:07:42 | sent 31.07 18:13:54 [coord]568|565[/coord] --> Ankunftszeit: 03.08.26 09:10:48 [player]All Eyez on Me[/player]
+    [command]attack[/command] Ramme | return 05.08 20:15:21 | sent 31.07 22:08:59 [coord]550|530[/coord] --> Ankunftszeit: 03.08.26 09:12:10 [player]Quadrivium[/player]
+ </script>
+<script type="text/plain" id="demoTroops">
+281
+1
+« -=01=- (461|598) K54 - 281 - Karte - Übersichten - Berichte - Nachrichten - Stamm - Rangliste - Mehr - Aufgaben »
+30.6K 122K 33.6K 19783/24000
+« - Farmgod - Farm Klicker - Hauptgebäude - Rekrutieren - Versammlungsplatz - Adelshof - Schmiede - Marktplatz - Angrifswarnung - Befehlsabbruchsrechner - Dorfnotiz festlegen/abrufen - Eingehende Angriffsübersicht - FakeGenerator - Retime Planer - Speicher ausgleicher - add_barbs - Wallentferner Barbarendörfer - farm finder - Snipe - Resourcen sender - Dörfer in Reichweite - Fake AP - Fake Deff Ap - Off AP - Deff Ap - AG Ap - Bonus-Barbarendörfer finder - debug - Tab - Bericht in Dorf Notiz »
+Truppen
+Übersicht
+Gruppen:
+[1] [2] [3] [4] [5] >alle<
+Alle 	Eigene 	Im Dorf 	Auswärts 	Unterwegs 	Verteidigung 	Unterstützungen
+Dorf (43) 											Aktion
+-=01=- (461|598) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/axe_polished.webp"> Einfache Axt</h3> :: <ul><li>+4% Holzproduktion</li><li>Schwertkämpfer: +2% Angriffs- und Verteidigungsstärke</li><li>Leichte Kavallerie: +2% Angriffs- und Verteidigungsstärke</li></ul><p></p>] 	eigene 	98	100	4110	81	2056	0	300	100	12 	Befehle
+im Dorf 	32046	22403	4110	1202	2056	2075	300	101	12 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	32046	22403	4110	1202	2056	2075	300	101	12 	Truppen
+-=02=- (458|586) K54 	eigene 	0	0	5999	50	3050	0	283	88	0 	Befehle
+im Dorf 	996	996	5999	50	3050	0	283	88	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	996	996	5999	50	3050	0	283	88	0 	Truppen
+-=03=- (459|591) K54 	eigene 	97	97	5569	97	2775	0	300	100	5 	Befehle
+im Dorf 	22495	20730	5569	1165	2775	0	300	100	5 	Truppen
+auswärts 	0	0	0	0	70	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	22495	20730	5569	1165	2845	0	300	100	5 	Truppen
+-=04=- (449|595) K54 	eigene 	350	332	0	150	0	0	0	0	0 	Befehle
+im Dorf 	350	332	0	150	0	0	0	0	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	350	332	0	150	0	0	0	0	0 	Truppen
+-=05=- (449|600) K64 	eigene 	96	96	1321	79	774	0	128	108	0 	Befehle
+im Dorf 	96	96	1321	81	774	25	128	108	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	96	96	1321	81	774	25	128	108	0 	Truppen
+-=06=- (457|590) K54 	eigene 	289	521	0	48	750	0	0	237	0 	Befehle
+im Dorf 	289	521	0	48	750	0	0	237	0 	Truppen
+auswärts 	3483	3233	0	102	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	3772	3754	0	150	750	0	0	237	0 	Truppen
+-=07=- (453|595) K54 	eigene 	50	50	300	20	143	0	20	9	0 	Befehle
+im Dorf 	50	50	300	20	143	0	20	9	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	50	50	300	20	143	0	20	9	0 	Truppen
+-=08=- (446|607) K64 	eigene 	50	50	1811	40	895	0	89	38	0 	Befehle
+im Dorf 	50	50	1811	40	895	0	89	38	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	50	50	1811	40	895	0	89	38	0 	Truppen
+-=09=- (451|575) K54 	eigene 	80	79	3643	64	1847	0	190	69	0 	Befehle
+im Dorf 	80	79	3643	64	1847	0	190	69	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	80	79	3643	64	1847	0	190	69	0 	Truppen
+-=10=- (450|588) K54 	eigene 	50	50	167	20	86	0	12	10	0 	Befehle
+im Dorf 	76	76	181	20	101	0	12	10	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	76	76	181	20	101	0	12	10	0 	Truppen
+-=11=- (443|601) K64 	eigene 	50	50	200	20	95	0	20	10	0 	Befehle
+im Dorf 	50	50	200	20	165	0	20	10	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	50	50	200	20	165	0	20	10	0 	Truppen
+-=12=- (457|592) K54 	eigene 	2048	2031	0	43	750	0	0	249	0 	Befehle
+im Dorf 	2048	2031	0	43	750	0	0	249	0 	Truppen
+auswärts 	2405	2404	0	107	0	0	0	1	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	4453	4435	0	150	750	0	0	250	0 	Truppen
+-=13=- (451|581) K54 	eigene 	2445	2408	0	42	750	40	0	220	0 	Befehle
+im Dorf 	2445	2408	0	42	750	40	0	220	0 	Truppen
+auswärts 	2387	2387	0	108	0	0	0	1	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	4832	4795	0	150	750	40	0	221	0 	Truppen
+-=14=- (477|551) K54 	eigene 	49	49	2653	60	1329	0	151	49	0 	Befehle
+im Dorf 	443	49	2653	60	1329	0	151	49	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	443	49	2653	60	1329	0	151	49	0 	Truppen
+-=15=- (478|550) K54 	eigene 	519	25	187	84	333	20	35	187	0 	Befehle
+im Dorf 	519	25	187	84	333	20	35	187	0 	Truppen
+auswärts 	4974	0	0	30	0	1023	0	1	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	5493	25	187	114	333	1043	35	188	0 	Truppen
+-=18=- (482|545) K54 	eigene 	400	347	0	148	452	0	5	222	0 	Befehle
+im Dorf 	493	440	0	148	452	0	5	223	0 	Truppen
+auswärts 	5500	400	0	0	0	1378	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	5993	840	0	148	452	1378	5	223	0 	Truppen
+-=19=- (483|535) K54 	eigene 	100	101	3237	55	1624	0	270	98	3 	Befehle
+im Dorf 	15385	15385	3237	872	1624	0	270	98	3 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	15385	15385	3237	872	1624	0	270	98	3 	Truppen
+-=20=- (488|533) K54 	eigene 	397	25	0	48	245	3	5	138	0 	Befehle
+im Dorf 	397	25	0	48	245	3	5	138	0 	Truppen
+auswärts 	3600	0	0	35	0	762	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	3997	25	0	83	245	765	5	138	0 	Truppen
+-=23=- (457|609) K64 	eigene 	100	100	1417	92	698	0	70	96	0 	Befehle
+im Dorf 	17647	12897	1417	1056	698	450	70	97	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	17647	12897	1417	1056	698	450	70	97	0 	Truppen
+-=25=- (447|573) K54 	eigene 	94	93	2942	68	1560	0	206	81	0 	Befehle
+im Dorf 	94	93	2942	68	1560	0	206	81	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	94	93	2942	68	1560	0	206	81	0 	Truppen
+-=26=- (493|525) K54 	eigene 	463	0	0	52	500	0	5	250	0 	Befehle
+im Dorf 	463	0	0	52	500	0	5	250	0 	Truppen
+auswärts 	6316	216	0	96	0	1600	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	6779	216	0	148	500	1600	5	250	0 	Truppen
+-=27=- (444|588) K54 	eigene 	494	0	0	20	277	162	5	87	0 	Befehle
+im Dorf 	694	0	0	20	277	162	5	87	0 	Truppen
+auswärts 	1781	1385	0	70	0	100	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	2475	1385	0	90	277	262	5	87	0 	Truppen
+-=28=- (494|525) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/banner_polished.webp"> Einfaches Banner</h3> :: <ul><li>Schwere Kavallerie: +4% Angriffs- und Verteidigungsstärke</li><li>Axtkämpfer: +2% Angriffs- und Verteidigungsstärke</li><li>+2% Eisenproduktion</li></ul><p></p>] 	eigene 	664	23	0	34	159	0	5	35	0 	Befehle
+im Dorf 	664	23	0	34	159	0	5	35	0 	Truppen
+auswärts 	2000	0	0	15	0	549	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	2664	23	0	49	159	549	5	35	0 	Truppen
+-=30=- (438|598) K54 	eigene 	0	0	2923	0	1484	0	194	64	0 	Befehle
+im Dorf 	218	0	2923	0	1484	0	194	64	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	218	0	2923	0	1484	0	194	64	0 	Truppen
+-=31=- (440|603) K64 	eigene 	782	0	0	20	92	259	5	98	0 	Befehle
+im Dorf 	782	0	0	20	92	259	5	98	0 	Truppen
+auswärts 	541	324	0	19	0	25	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	1323	324	0	39	92	284	5	98	0 	Truppen
+-=32=- (441|602) K64 	eigene 	40	40	788	17	374	0	40	20	0 	Befehle
+im Dorf 	40	40	788	17	374	0	40	20	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	40	40	788	17	374	0	40	20	0 	Truppen
+-=33=- (443|581) K54 	eigene 	47	50	2685	50	1366	0	150	51	0 	Befehle
+im Dorf 	47	50	2685	50	1366	100	150	51	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	47	50	2685	50	1366	100	150	51	0 	Truppen
+-=34=- (443|580) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/shortspear_refined.webp"> Verbesserter Kurzspeer</h3> :: <ul><li>Leichte Kavallerie: +6% Angriffs- und Verteidigungsstärke</li><li>Werkstatt: +3% Rekrutierungs-Geschwindigkeit</li><li>Späher: +3% Tarnung</li></ul><p></p>] 	eigene 	2897	268	0	91	338	726	5	175	0 	Befehle
+im Dorf 	2897	268	0	91	338	726	5	175	0 	Truppen
+auswärts 	1370	397	0	20	0	293	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	4267	665	0	111	338	1019	5	175	0 	Truppen
+-=35=- (443|579) K54 	eigene 	1951	98	0	115	500	0	5	250	0 	Befehle
+im Dorf 	1951	98	0	115	500	0	5	250	0 	Truppen
+auswärts 	1693	692	0	35	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	3644	790	0	150	500	0	5	250	0 	Truppen
+-=37=- (489|530) K54 	eigene 	483	24	0	88	0	0	0	0	0 	Befehle
+im Dorf 	483	24	0	88	0	0	0	0	0 	Truppen
+auswärts 	4195	0	0	17	0	1096	0	0	0
+unterwegs 	0	0	0	0	349	0	5	234	0 	Befehle
+insgesamt 	4678	24	0	105	349	1096	5	234	0 	Truppen
+-=38=- (490|531) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/chisel_superior.webp"> Erstklassiger Meißel</h3> :: <ul><li>+8% Lehmproduktion</li><li>Schwere Kavallerie: +4% Angriffs- und Verteidigungsstärke</li><li>Späher: +4% Wahrnehmung</li></ul><p></p>] 	eigene 	467	171	0	1217	817	0	5	118	0 	Befehle
+im Dorf 	467	171	0	1217	817	0	5	118	0 	Truppen
+auswärts 	800	0	0	50	0	829	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	1267	171	0	1267	817	829	5	118	0 	Truppen
+-=39=- (491|530) K54 	eigene 	49	49	1	0	0	0	1	0	0 	Befehle
+im Dorf 	49	49	1	0	0	0	1	0	0 	Truppen
+auswärts 	0	0	0	40	0	0	0	0	0
+unterwegs 	0	0	873	0	443	0	49	20	0 	Befehle
+insgesamt 	49	49	874	40	443	0	50	20	0 	Truppen
+-=40=- (489|532) K54 	eigene 	964	962	0	123	750	0	10	154	0 	Befehle
+im Dorf 	964	962	0	123	750	0	10	154	0 	Truppen
+auswärts 	643	643	0	27	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	1607	1605	0	150	750	0	10	154	0 	Truppen
+-=41=- (489|531) K54 	eigene 	518	514	0	137	750	0	4	0	0 	Befehle
+im Dorf 	518	514	0	137	750	0	4	0	0 	Truppen
+auswärts 	656	656	0	13	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	1174	1170	0	150	750	0	4	0	0 	Truppen
+-=42=- (457|568) K54 	eigene 	6554	25	0	108	364	1153	5	265	0 	Befehle
+im Dorf 	6599	25	0	110	364	1165	5	265	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	6599	25	0	110	364	1165	5	265	0 	Truppen
+-=43=- (486|532) K54 	eigene 	0	0	4609	0	2027	0	296	97	0 	Befehle
+im Dorf 	306	0	4609	0	2027	0	296	97	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	306	0	4609	0	2027	0	296	97	0 	Truppen
+-=44=- (488|532) K54 	eigene 	1243	209	0	11	120	353	5	126	2 	Befehle
+im Dorf 	17443	1009	0	61	120	5262	5	126	2 	Truppen
+auswärts 	1115	809	0	74	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	18558	1818	0	135	120	5262	5	126	2 	Truppen
+-=45=- (485|531) K54 	eigene 	73	73	14	42	10	0	0	0	0 	Befehle
+im Dorf 	147	147	14	47	10	0	0	0	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	2002	0	1047	0	153	59	0 	Befehle
+insgesamt 	147	147	2016	47	1057	0	153	59	0 	Truppen
+-=46=- (455|523) K54 	eigene 	100	305	0	122	576	35	8	104	0 	Befehle
+im Dorf 	100	305	0	122	576	35	8	104	0 	Truppen
+auswärts 	258	216	0	0	0	0	0	0	0
+unterwegs 	1201	600	0	0	0	297	0	0	0 	Befehle
+insgesamt 	1559	1121	0	122	576	332	8	104	0 	Truppen
+-=47=- (482|522) K54 	eigene 	193	195	3359	60	1549	0	217	77	0 	Befehle
+im Dorf 	193	195	3359	60	1549	0	217	77	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	193	195	3359	60	1549	0	217	77	0 	Truppen
+-=48=- (454|586) K54 	eigene 	51	51	2374	45	1206	0	133	46	0 	Befehle
+im Dorf 	301	51	2374	45	1206	0	133	46	0 	Truppen
+auswärts 	26	26	14	0	15	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	327	77	2388	45	1221	0	133	46	0 	Truppen
+-=49=- (476|593) K54 [<h3><img class="relic-icon-small" src="https://dsde.innogamescdn.com/asset/fa57a0ef/graphic/relic_system/relics_46/banner_polished.webp"> Einfaches Banner</h3> :: <ul><li>Schwere Kavallerie: +4% Angriffs- und Verteidigungsstärke</li><li>Werkstatt: +2% Rekrutierungs-Geschwindigkeit</li><li>Späher: +2% Tarnung</li></ul><p></p>] 	eigene 	43	64	2481	60	1397	0	141	51	16 	Befehle
+im Dorf 	29931	31020	2484	2800	1397	0	141	51	16 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	29931	31020	2484	2800	1397	0	141	51	16 	Truppen
+-=50=- MEINS (461|604) K64 	eigene 	1125	25	0	40	92	240	5	110	0 	Befehle
+im Dorf 	29013	17378	0	220	92	1548	5	110	0 	Truppen
+auswärts 	0	0	0	0	0	0	0	0	0
+unterwegs 	0	0	0	0	0	0	0	0	0 	Befehle
+insgesamt 	29013	17378	0	220	92	1548	5	110	0 	Truppen
+
+Desktop-Version
+
+18:41:38 02/08/2026
+</script>
+<script>
+/* Tabben-Planer v2 – Rechenkern (keine DOM-Abhängigkeit, in Node testbar) */
+(function (root) {
+  'use strict';
+
+  // Reihenfolge der Spalten in Truppenübersicht und Verteidiger-Zeile
+  const UNITS = ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'ram', 'catapult', 'snob'];
+  const UNIT_LABELS = { spear: 'Speer', sword: 'Schwert', axe: 'Axt', spy: 'Späher', light: 'LKav', heavy: 'SKav', ram: 'Ramme', catapult: 'Kata', snob: 'AG' };
+  // DS-Ultimate-Exportreihenfolge (13 Slots)
+  const EXPORT_ORDER = ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob', 'militia'];
+  // Minuten pro Feld bei Geschwindigkeit 1
+  const BASE_SPEED = { spear: 18, sword: 22, axe: 18, spy: 9, light: 10, heavy: 11, ram: 30, catapult: 30, snob: 35 };
+  // grobe Deffkraft je Einheit: Mittel aus allgemeiner und Kavallerie-Verteidigung
+  const DEF_VALUE = { spear: 30, sword: 32.5, axe: 7.5, spy: 1.5, light: 35, heavy: 140, ram: 35, catapult: 75, snob: 75 };
+
+  const DEFAULT_PRESETS = [
+    { name: 'Dual SD 200', active: true, units: { spear: 200, sword: 200 } },
+    { name: 'Flex 300/100', active: true, units: { spear: 300, heavy: 100 } },
+    { name: 'SKav 100', active: true, units: { heavy: 100 } }
+  ];
+
+  const DEFAULT_SETTINGS = {
+    world: 'de258',
+    unitSpeed: 1, worldSpeed: 1,
+    speedSource: '',       // leer = Weltgeschwindigkeit noch nicht bestätigt
+    speeds: Object.assign({}, BASE_SPEED),
+    typeCode: 6,
+    // Lücken
+    waveBreakMin: 30,      // Pause > X Min = neue Welle
+    minGapSec: 1,          // kleinere Lücken werden ignoriert
+    landOffsetSec: 0,      // 0 = gleiche Sekunde wie der frühere Inc
+    // Gewichte
+    wCount: 1, wShort: 1, wCenter: 0.5, wWeak: 1, wSpread: 2,
+    shortRefSec: 120, weakRef: 150000,
+    unitWeights: { ag: 1.5, kata: 1.3, ramme: 1, spaeher: 0.2, other: 0.8 },
+    threats: '',           // "Spieler=2" oder "x|y=3" pro Zeile
+    // Limits
+    reservePct: 0, maxPerVillage: 0, maxTotal: 0, maxTravelH: 0, leadMin: 2,
+    excludeAttacked: false,
+    skipBunker: true,      // Dörfer mit viel Fremddeff nicht tabben
+    bunkerMin: 3000,       // ab so vielen fremden Deff-Einheiten (Speer+Schwert+SKav) gilt ein Dorf als Bunker
+    windows: [],           // [{start:'20:45', end:'01:00'}]
+    windowBufferMin: 0
+  };
+
+  // ---------- Hilfsfunktionen ----------
+  const pad = n => String(n).padStart(2, '0');
+  function fmtTime(ms) { const d = new Date(ms); return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}. ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+  function fmtDur(sec) { sec = Math.round(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60; return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`; }
+  function b64enc(s) { return typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'binary').toString('base64'); }
+  function b64dec(s) { try { return typeof atob === 'function' ? atob(s) : Buffer.from(s, 'base64').toString('binary'); } catch (e) { return ''; } }
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function unitsText(u) { return UNITS.filter(k => u[k] > 0).map(k => `${u[k]} ${UNIT_LABELS[k]}`).join(', '); }
+
+  // ---------- Parser ----------
+  function parseSOS(text) {
+    const out = [];
+    const blocks = String(text || '').split(/\[b\]Dorf:\[\/b\]/i).slice(1);
+    for (const block of blocks) {
+      const cm = block.match(/\[coord\](\d+)\|(\d+)\[\/coord\]/);
+      if (!cm) continue;
+      const v = { coord: `${cm[1]}|${cm[2]}`, x: +cm[1], y: +cm[2], wall: null, def: null, attacks: [] };
+      const wm = block.match(/Wallstufe:\[\/b\]\s*(\d+)/i);
+      if (wm) v.wall = +wm[1];
+      const dm = block.match(/Verteidiger:\[\/b\]\s*([\d\s]+)/i);
+      if (dm) {
+        const nums = dm[1].trim().split(/\s+/).map(Number);
+        if (nums.length >= 9) { v.def = {}; UNITS.forEach((k, i) => v.def[k] = nums[i]); }
+      }
+      for (const line of block.split('\n')) {
+        const tm = line.match(/Ankunftszeit:\s*(\d{2})\.(\d{2})\.(\d{2,4})\s+(\d{2}):(\d{2}):(\d{2})(?::(\d{3}))?/);
+        if (!tm) continue;
+        const yy = +tm[3] < 100 ? 2000 + +tm[3] : +tm[3];
+        const t = new Date(yy, +tm[2] - 1, +tm[1], +tm[4], +tm[5], +tm[6], +(tm[7] || 0)).getTime();
+        const lm = line.match(/\[\/command\]\s*([^|\[]*)/);
+        const ac = line.match(/\[coord\](\d+\|\d+)\[\/coord\]/);
+        const pm = line.match(/\[player\](.*?)\[\/player\]/);
+        v.attacks.push({ t, label: lm ? lm[1].trim() : '', from: ac ? ac[1] : '', player: pm ? pm[1] : '' });
+      }
+      v.attacks.sort((a, b) => a.t - b.t);
+      // dasselbe Dorf kann mehrfach im SOS stehen -> zusammenführen
+      const prev = out.find(o => o.coord === v.coord);
+      if (prev) { prev.attacks = prev.attacks.concat(v.attacks).sort((a, b) => a.t - b.t); }
+      else out.push(v);
+    }
+    return out;
+  }
+
+  // Truppenübersicht: Zeile mit "(x|y) Kxx" und "eigene <9 Zahlen> Befehle"
+  function parseTroops(text) {
+    const villages = [];
+    let serverTime = null;
+    for (const raw of String(text || '').split('\n')) {
+      const line = raw.trim();
+      const st = line.match(/^(?:Serverzeit:\s*)?(\d{2}):(\d{2}):(\d{2})\s+(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (st) serverTime = new Date(+st[6], +st[5] - 1, +st[4], +st[1], +st[2], +st[3]).getTime();
+      const cm = line.match(/\((\d+)\|(\d+)\)\s*K\d+/);
+      const em = line.match(/eigene\s+([\d\s]+?)\s*Befehle/);
+      if (!cm || !em) continue;
+      const nums = em[1].trim().split(/\s+/).map(Number);
+      if (nums.length < 9) continue;
+      const nm = line.match(/^(.*?)\s*\(\d+\|\d+\)/);
+      const troops = {};
+      UNITS.forEach((k, i) => troops[k] = nums[i]);
+      const coord = `${cm[1]}|${cm[2]}`;
+      if (!villages.some(v => v.coord === coord)) villages.push({ coord, x: +cm[1], y: +cm[2], name: nm ? nm[1] : coord, troops });
+    }
+    return { villages, serverTime };
+  }
+
+  function parseVillageIds(text) {
+    const byCoord = {}, byId = {};
+    for (const raw of String(text || '').split('\n')) {
+      const l = raw.trim();
+      if (!l) continue;
+      let m = l.match(/^(\d+)\|(\d+)\s*=\s*(\d+)$/);
+      if (m) { byCoord[`${m[1]}|${m[2]}`] = m[3]; byId[m[3]] = `${m[1]}|${m[2]}`; continue; }
+      const p = l.split(',');
+      if (p.length >= 4 && /^\d+$/.test(p[0]) && /^\d+$/.test(p[2]) && /^\d+$/.test(p[3])) {
+        byCoord[`${p[2]}|${p[3]}`] = p[0]; byId[p[0]] = `${p[2]}|${p[3]}`;
+      }
+    }
+    return { byCoord, byId };
+  }
+
+  // Übersichten → Befehle → Unterstützung:
+  // "Unterstützung für Name (x|y) Kxx <TAB> Herkunft (x|y) Kxx <TAB> morgen um 05:15:33 <TAB> 9 Truppenzahlen"
+  function parseOutgoing(text, fallbackNow) {
+    const rows = [];
+    let base = null;
+    const lines = String(text || '').split('\n');
+    for (const l of lines) {
+      const m = l.trim().match(/^(?:Serverzeit:\s*)?(\d{2}):(\d{2}):(\d{2})\s+(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (m) base = new Date(+m[6], +m[5] - 1, +m[4]);
+    }
+    if (!base) { const d = new Date(fallbackNow || Date.now()); base = new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+    for (const raw of lines) {
+      const l = raw.trim();
+      if (!/^Unterstützung/i.test(l)) continue;
+      const coords = [...l.matchAll(/\((\d+)\|(\d+)\)/g)].map(c => `${c[1]}|${c[2]}`);
+      const tm = l.match(/(heute|morgen|am\s+(\d{1,2})\.(\d{1,2})\.(\d{2,4})?)\s+um\s+(\d{1,2}):(\d{2}):(\d{2})/i);
+      if (coords.length < 2 || !tm) continue;
+      const d = new Date(base);
+      if (/^morgen/i.test(tm[1])) d.setDate(d.getDate() + 1);
+      else if (/^am/i.test(tm[1])) {
+        d.setMonth(+tm[3] - 1, +tm[2]);
+        if (tm[4]) d.setFullYear(+tm[4] < 100 ? 2000 + +tm[4] : +tm[4]);
+        else if (d < base) d.setFullYear(d.getFullYear() + 1); // Jahreswechsel
+      }
+      d.setHours(+tm[5], +tm[6], +tm[7], 0);
+      const nums = l.slice(l.indexOf(tm[0]) + tm[0].length).trim().split(/\s+/).filter(x => /^\d+$/.test(x)).map(Number);
+      const order = nums.length >= 10 ? ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'ram', 'catapult', 'knight', 'snob'] : UNITS;
+      const units = {};
+      order.forEach((k, i) => { if (nums[i] > 0 && k !== 'knight') units[k] = nums[i]; });
+      rows.push({ tgt: coords[0], src: coords[1], arrival: d.getTime(), units, kind: 'unterwegs' });
+    }
+    return rows;
+  }
+
+  // Bestehender DS-Ultimate-Plan (Export-Zeilen) -> bereits geplante Befehle
+  function parsePlan(text, ids) {
+    const rows = [], unknown = [];
+    for (const raw of String(text || '').split('\n')) {
+      const p = raw.trim().split('&');
+      if (p.length < 8 || !/^\d+$/.test(p[0]) || !/^\d+$/.test(p[3])) continue;
+      const units = {};
+      for (const part of p[7].split('/')) {
+        const [k, v] = part.split('=');
+        if (k && v && k !== 'militia') { const n = parseInt(b64dec(v), 10); if (n > 0) units[k] = n; }
+      }
+      const src = ids.byId[p[0]], tgt = ids.byId[p[1]];
+      if (!src || !tgt) { unknown.push(raw.trim()); continue; }
+      rows.push({ src, tgt, unit: p[2], arrival: +p[3], type: +p[4], units, raw: raw.trim() });
+    }
+    return { rows, unknown };
+  }
+
+  // unit_info.xml (interface.php?func=get_unit_info): Minuten pro Feld inkl. Welt- und Einheitengeschwindigkeit
+  function parseUnitInfo(xml) {
+    const speeds = {};
+    for (const k of UNITS) {
+      const m = String(xml || '').match(new RegExp('<' + k + '>[\\s\\S]*?<speed>([\\d.]+)</speed>'));
+      if (m) speeds[k] = parseFloat(m[1]);
+    }
+    return Object.keys(speeds).length >= 5 ? speeds : null;
+  }
+
+  function parseThreats(text) {
+    const list = [];
+    for (const raw of String(text || '').split('\n')) {
+      const l = raw.trim();
+      if (!l || l.startsWith('#')) continue;
+      const m = l.match(/^(.*?)\s*(?:=\s*([\d.,]+))?$/);
+      const key = m[1].trim();
+      if (!key) continue;
+      list.push({ key: key.toLowerCase(), factor: m[2] ? parseFloat(m[2].replace(',', '.')) : 2 });
+    }
+    return list;
+  }
+
+  // ---------- Laufzeit / Zeitfenster ----------
+  function slowestUnit(units, speeds) {
+    let best = null;
+    for (const k of UNITS) if ((units[k] || 0) > 0 && (!best || speeds[k] > speeds[best])) best = k;
+    return best;
+  }
+  function travelSec(from, to, unit, s) {
+    return Math.round(dist(from, to) * s.speeds[unit] * 60 / (s.unitSpeed * s.worldSpeed));
+  }
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  function inWindows(ms, windows, buf) {
+    if (!windows || !windows.length) return true;
+    const d = new Date(ms), mins = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+    return windows.some(w => {
+      const a = toMin(w.start), b = toMin(w.end);
+      if (a <= b) { const s = a + buf, e = b - buf; return s <= e && mins >= s && mins <= e; }
+      return mins >= a + buf || mins <= b - buf; // über Mitternacht
+    });
+  }
+
+  // ---------- Pakete bilden ----------
+  // Reihum nach Preset-Reihenfolge je ein Paket bilden, solange Truppen reichen.
+  function buildPackages(villages, presets, s, opts) {
+    const active = presets.map((p, i) => Object.assign({ idx: i }, p)).filter(p => p.active !== false && UNITS.some(k => (p.units[k] || 0) > 0));
+    const exclude = (opts && opts.exclude) || new Set();
+    const reserved = (opts && opts.reserved) || {};
+    const groups = [], perVillage = [];
+    for (const v of villages) {
+      const stock = {};
+      for (const k of UNITS) {
+        const free = Math.max(0, v.troops[k] - ((reserved[v.coord] || {})[k] || 0));
+        stock[k] = Math.floor(free * (1 - s.reservePct / 100));
+      }
+      const counts = active.map(() => 0);
+      if (!exclude.has(v.coord)) {
+        let progress = true;
+        while (progress) {
+          progress = false;
+          active.forEach((p, i) => {
+            if (UNITS.every(k => stock[k] >= (p.units[k] || 0))) {
+              UNITS.forEach(k => stock[k] -= (p.units[k] || 0));
+              counts[i]++; progress = true;
+            }
+          });
+        }
+      }
+      perVillage.push({ coord: v.coord, name: v.name, counts, rest: stock, excluded: exclude.has(v.coord) });
+      active.forEach((p, i) => {
+        if (!counts[i]) return;
+        const units = {}; UNITS.forEach(k => units[k] = p.units[k] || 0);
+        const slow = slowestUnit(units, s.speeds);
+        groups.push({ id: groups.length, coord: v.coord, x: v.x, y: v.y, name: v.name, preset: p.name, presetIdx: p.idx, units, slow, count: counts[i] });
+      });
+    }
+    return { groups, perVillage, presetNames: active.map(p => p.name) };
+  }
+
+  // ---------- Wellen & Lücken ----------
+  function computeSlots(targets, s) {
+    const slots = [];
+    const maxInc = Math.max(1, ...targets.map(t => t.attacks.length));
+    for (const v of targets) {
+      const A = v.attacks;
+      const waves = [];
+      let cur = [];
+      A.forEach((a, i) => {
+        if (i && a.t - A[i - 1].t > s.waveBreakMin * 60000) { waves.push(cur); cur = []; }
+        cur.push(a);
+      });
+      if (cur.length) waves.push(cur);
+      v.waves = waves.map(w => ({ start: w[0].t, end: w[w.length - 1].t, count: w.length }));
+      let defPower = null;
+      if (v.def) defPower = UNITS.reduce((sum, k) => sum + v.def[k] * DEF_VALUE[k], 0) * Math.pow(1.037, v.wall || 0);
+      v.defPower = defPower;
+      waves.forEach((w, wi) => {
+        const n = w.length - 1;
+        for (let i = 0; i < n; i++) {
+          const prev = w[i], next = w[i + 1];
+          const gapSec = (next.t - prev.t) / 1000;
+          const arrival = prev.t + s.landOffsetSec * 1000;
+          const ok = gapSec >= s.minGapSec && arrival < next.t;
+          slots.push({
+            id: slots.length, target: v.coord, x: v.x, y: v.y, wave: wi, pos: i, waveGaps: n,
+            arrival, prev, next, gapSec, incCount: A.length, maxInc, defPower, wall: v.wall, valid: ok
+          });
+        }
+      });
+    }
+    return slots;
+  }
+
+  function unitFactor(label, uw) {
+    const l = (label || '').toLowerCase();
+    if (/\bag\b|adel/.test(l)) return uw.ag;
+    if (/kata/.test(l)) return uw.kata;
+    if (/ramm/.test(l)) return uw.ramme;
+    if (/späh|spah|spaeh|spy/.test(l)) return uw.spaeher;
+    return uw.other;
+  }
+
+  function scoreSlot(sl, s, threats) {
+    const cCount = sl.incCount / sl.maxInc;
+    const cShort = 1 / (1 + sl.gapSec / s.shortRefSec);
+    const half = (sl.waveGaps - 1) / 2;
+    const cCenter = sl.waveGaps <= 1 ? 1 : 1 - Math.abs(sl.pos - half) / half;
+    const cWeak = sl.defPower == null ? 0.5 : 1 / (1 + sl.defPower / s.weakRef);
+    const base = 1 + s.wCount * cCount + s.wShort * cShort + s.wCenter * cCenter + s.wWeak * cWeak;
+    const uf = unitFactor(sl.next.label, s.unitWeights);
+    let tf = 1;
+    for (const th of threats) {
+      if ((sl.next.player || '').toLowerCase() === th.key || sl.next.from === th.key) tf = Math.max(tf, th.factor);
+    }
+    sl.parts = { cCount, cShort, cCenter, cWeak, uf, tf };
+    sl.score = base * uf * tf;
+    return sl.score;
+  }
+
+  // ---------- Optimale Zuteilung: Min-Cost-Flow (Successive Shortest Paths) ----------
+  // S -> Paketgruppe (cap=Anzahl) -> Lücke (cap 1, Kosten -Score) -> Zieldorf -> T
+  // Zieldorf -> T: erste Kante mit Verteilungsbonus (cap 1), zweite ohne (Rest bis Limit).
+  function solve(groups, slots, villageCaps, spreadBonus, maxTotal, edgeList) {
+    const G = groups.length, L = slots.length;
+    const tgtList = [...new Set(slots.map(x => x.target))];
+    const V = tgtList.length, tIdx = {};
+    tgtList.forEach((c, i) => tIdx[c] = i);
+    const S = 0, T = 1 + G + L + V, N = T + 1;
+    const head = new Int32Array(N).fill(-1);
+    const to = [], cap = [], cost = [], nxt = [];
+    function add(u, v, c, w) {
+      to.push(v); cap.push(c); cost.push(w); nxt.push(head[u]); head[u] = to.length - 1;
+      to.push(u); cap.push(0); cost.push(-w); nxt.push(head[v]); head[v] = to.length - 1;
+    }
+    const gNode = i => 1 + i, lNode = j => 1 + G + j, vNode = k => 1 + G + L + k;
+    groups.forEach((g, i) => add(S, gNode(i), g.count, 0));
+    const pairEdge = [];
+    for (const e of edgeList) { pairEdge.push({ e, idx: to.length }); add(gNode(e.g), lNode(e.l), 1, -e.w); }
+    slots.forEach((sl, j) => add(lNode(j), vNode(tIdx[sl.target]), 1, 0));
+    tgtList.forEach((c, k) => {
+      const capV = villageCaps[c] == null ? 1e9 : villageCaps[c];
+      if (capV <= 0) return;
+      const bonus = spreadBonus[c] || 0;
+      if (bonus > 0) { add(vNode(k), T, 1, -bonus); if (capV > 1) add(vNode(k), T, capV - 1, 0); }
+      else add(vNode(k), T, capV, 0);
+    });
+    // Startpotentiale: Graph ist ein DAG -> kürzeste Wege in Topologie-Reihenfolge
+    const INF = 1e18, pot = new Float64Array(N).fill(0), d0 = new Float64Array(N).fill(INF);
+    d0[S] = 0;
+    const order = [S]; for (let i = 0; i < G; i++) order.push(gNode(i)); for (let j = 0; j < L; j++) order.push(lNode(j)); for (let k = 0; k < V; k++) order.push(vNode(k)); order.push(T);
+    for (const u of order) {
+      if (d0[u] >= INF) continue;
+      for (let e = head[u]; e !== -1; e = nxt[e]) if (cap[e] > 0 && d0[u] + cost[e] < d0[to[e]]) d0[to[e]] = d0[u] + cost[e];
+    }
+    for (let u = 0; u < N; u++) pot[u] = d0[u] < INF ? d0[u] : 0;
+
+    let flow = 0, total = 0;
+    const dist = new Float64Array(N), prevE = new Int32Array(N);
+    // binärer Heap
+    while (maxTotal <= 0 || flow < maxTotal) {
+      dist.fill(INF); prevE.fill(-1); dist[S] = 0;
+      const hk = [0], hv = [S];
+      const push = (k, v) => { hk.push(k); hv.push(v); let i = hk.length - 1; while (i) { const p = (i - 1) >> 1; if (hk[p] <= hk[i]) break; [hk[p], hk[i]] = [hk[i], hk[p]]; [hv[p], hv[i]] = [hv[i], hv[p]]; i = p; } };
+      const pop = () => { const k = hk[0], v = hv[0], lk = hk.pop(), lv = hv.pop(); if (hk.length) { hk[0] = lk; hv[0] = lv; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < hk.length && hk[l] < hk[m]) m = l; if (r < hk.length && hk[r] < hk[m]) m = r; if (m === i) break; [hk[m], hk[i]] = [hk[i], hk[m]]; [hv[m], hv[i]] = [hv[i], hv[m]]; i = m; } } return [k, v]; };
+      while (hk.length) {
+        const [du, u] = pop();
+        if (du > dist[u]) continue;
+        for (let e = head[u]; e !== -1; e = nxt[e]) {
+          if (cap[e] <= 0) continue;
+          const v = to[e], nd = du + cost[e] + pot[u] - pot[v];
+          if (nd < dist[v] - 1e-12) { dist[v] = nd; prevE[v] = e; push(nd, v); }
+        }
+      }
+      if (dist[T] >= INF) break;
+      const realCost = dist[T] + pot[T] - pot[S];
+      if (realCost >= -1e-9) break; // weiterer Tab würde die Summe nicht verbessern
+      for (let u = 0; u < N; u++) if (dist[u] < INF) pot[u] += dist[u];
+      let v = T;
+      while (v !== S) { const e = prevE[v]; cap[e] -= 1; cap[e ^ 1] += 1; v = to[e ^ 1]; }
+      flow++; total += -realCost;
+    }
+    const chosen = [];
+    for (const pe of pairEdge) if (cap[pe.idx] === 0) chosen.push(pe.e);
+    return { chosen, flow, total };
+  }
+
+  // ---------- Gesamtablauf ----------
+  function plan(input) {
+    const s = Object.assign({}, DEFAULT_SETTINGS, input.settings || {});
+    s.speeds = Object.assign({}, BASE_SPEED, (input.settings || {}).speeds || {});
+    s.unitWeights = Object.assign({}, DEFAULT_SETTINGS.unitWeights, (input.settings || {}).unitWeights || {});
+    const warnings = [];
+    const targets = parseSOS(input.sos);
+    const tr = parseTroops(input.troops);
+    const ids = parseVillageIds(input.ids || '');
+    const threats = parseThreats(s.threats);
+
+    // Referenzzeit
+    let now = input.now != null ? input.now : Date.now();
+    let nowSource = input.now != null ? 'manuell' : 'Gerätezeit';
+    if (input.now == null && tr.serverTime) {
+      const diff = Math.abs(Date.now() - tr.serverTime);
+      if (diff > 24 * 3600e3) { now = tr.serverTime; nowSource = 'Serverzeit aus Truppenübersicht (Archivdaten)'; warnings.push('Truppenübersicht ist älter als 24 h – gerechnet wird mit deren Serverzeit (Testmodus).'); }
+      else { now = Math.max(Date.now(), tr.serverTime); nowSource = 'Gerätezeit'; }
+    }
+
+    // Bestehender Plan
+    const existing = parsePlan(input.plan, ids);
+    const outgoing = parseOutgoing(input.outgoing, now);
+    if (existing.unknown.length) warnings.push(`${existing.unknown.length} Planzeilen mit unbekannter Dorf-ID ignoriert.`);
+    const reserved = {}; // noch nicht abgeschickte, aber verplante Truppen
+    for (const r of existing.rows) {
+      const slow = slowestUnit(r.units, s.speeds) || (BASE_SPEED[r.unit] ? r.unit : null);
+      if (!slow) continue;
+      const src = ids.byId && tr.villages.find(v => v.coord === r.src);
+      const tgt = r.tgt.split('|').map(Number);
+      const send = r.arrival - travelSec({ x: +r.src.split('|')[0], y: +r.src.split('|')[1] }, { x: tgt[0], y: tgt[1] }, slow, s) * 1000;
+      r.send = send;
+      if (send > now && src) { reserved[r.src] = reserved[r.src] || {}; for (const k in r.units) reserved[r.src][k] = (reserved[r.src][k] || 0) + r.units[k]; }
+    }
+
+    // Bunker: Verteidiger laut SOS minus eigene Truppen = Fremddeff
+    const DEFF = ['spear', 'sword', 'heavy'];
+    for (const t of targets) {
+      const own = tr.villages.find(v => v.coord === t.coord);
+      const inVillage = t.def ? DEFF.reduce((a, k) => a + t.def[k], 0) : null;
+      t.foreign = inVillage == null ? null : Math.max(0, inVillage - (own ? DEFF.reduce((a, k) => a + own.troops[k], 0) : 0));
+      t.bunker = !!(s.skipBunker && t.foreign != null && t.foreign >= s.bunkerMin);
+    }
+    const bunkers = new Set(targets.filter(t => t.bunker).map(t => t.coord));
+    if (!s.speedSource) warnings.push(`Laufzeiten für ${s.world} nicht bestätigt: Spiel- und Einheitengeschwindigkeit unter „Welt & Export“ prüfen.`);
+    const attacked = new Set(targets.map(t => t.coord));
+    const pk = buildPackages(tr.villages, input.presets || DEFAULT_PRESETS, s, { exclude: s.excludeAttacked ? attacked : new Set(), reserved });
+    const slots = computeSlots(targets, s);
+
+    // Lücken, die der bestehende Plan schon abdeckt
+    const existingPerVillage = {};
+    for (const sl of slots) {
+      const hit = outgoing.find(r => r.tgt === sl.target && r.arrival >= sl.prev.t && r.arrival < sl.next.t)
+        || existing.rows.find(r => r.tgt === sl.target && r.arrival >= sl.prev.t && r.arrival < sl.next.t);
+      if (hit) { sl.existing = hit; existingPerVillage[sl.target] = (existingPerVillage[sl.target] || 0) + 1; }
+    }
+    slots.forEach(sl => scoreSlot(sl, s, threats));
+
+    // Kandidatenkanten
+    const open = slots.filter(sl => sl.valid && !sl.existing && sl.arrival > now && !bunkers.has(sl.target));
+    const edges = [];
+    const feasibleCount = new Map();
+    open.forEach((sl, j) => {
+      pk.groups.forEach((g, i) => {
+        if (g.coord === sl.target) return;
+        const tsec = travelSec(g, sl, g.slow, s);
+        if (s.maxTravelH > 0 && tsec > s.maxTravelH * 3600) return;
+        const send = sl.arrival - tsec * 1000;
+        if (send < now + s.leadMin * 60000) return;
+        if (!inWindows(send, s.windows, s.windowBufferMin)) { sl.windowBlocked = true; return; }
+        // kleiner Bonus für kürzere Laufzeit (präziser, weniger lang gebunden)
+        edges.push({ g: i, l: j, w: sl.score - tsec / 1e6, tsec, send });
+        feasibleCount.set(sl.id, (feasibleCount.get(sl.id) || 0) + 1);
+      });
+    });
+    open.forEach(sl => sl.candidates = feasibleCount.get(sl.id) || 0);
+
+    const caps = {}, spread = {};
+    for (const t of targets) {
+      const used = existingPerVillage[t.coord] || 0;
+      caps[t.coord] = s.maxPerVillage > 0 ? Math.max(0, s.maxPerVillage - used) : null;
+      spread[t.coord] = used > 0 ? 0 : s.wSpread;
+    }
+    const res = solve(pk.groups, open, caps, spread, s.maxTotal, edges);
+    const tabs = res.chosen.map(e => {
+      const g = pk.groups[e.g], sl = open[e.l];
+      sl.tab = true;
+      return { slot: sl, group: g, src: g.coord, tgt: sl.target, arrival: sl.arrival, send: e.send, tsec: e.tsec, units: g.units, slow: g.slow, preset: g.preset, score: sl.score };
+    }).sort((a, b) => a.send - b.send);
+
+    const usedPerGroup = {};
+    tabs.forEach(t => usedPerGroup[t.group.id] = (usedPerGroup[t.group.id] || 0) + 1);
+    pk.groups.forEach(g => g.used = usedPerGroup[g.id] || 0);
+
+    // Status je Lücke
+    for (const sl of slots) {
+      sl.status = sl.existing ? 'existing' : sl.tab ? 'tab' : bunkers.has(sl.target) ? 'bunker' : !sl.valid ? 'invalid' : sl.arrival <= now ? 'past' : sl.candidates ? 'nopkg' : sl.windowBlocked ? 'window' : 'unreachable';
+    }
+    const missingIds = [...new Set(tabs.flatMap(t => [t.src, t.tgt]).filter(c => !ids.byCoord[c]))];
+    if (missingIds.length) warnings.push(`Dorf-ID fehlt für ${missingIds.join(', ')} – diese Zeilen fehlen im AP-Export.`);
+    if (!targets.length) warnings.push('Keine angegriffenen Dörfer im SOS-Text erkannt.');
+    if (!tr.villages.length) warnings.push('Keine Dörfer in der Truppenübersicht erkannt (es wird die Zeile "eigene" gelesen).');
+
+    return { settings: s, now, nowSource, targets, villages: tr.villages, packages: pk, slots, tabs, existing, outgoing, warnings, ids, total: res.total };
+  }
+
+  // ---------- Exporte ----------
+  function exportDS(result) {
+    const { tabs, ids, settings: s } = result;
+    return tabs.filter(t => ids.byCoord[t.src] && ids.byCoord[t.tgt]).map(t => {
+      const troops = EXPORT_ORDER.map(u => u === 'militia' ? 'militia=MA==' : `${u}=${(t.units[u] || 0) > 0 ? b64enc(String(t.units[u])) : ''}`).join('/');
+      return [ids.byCoord[t.src], ids.byCoord[t.tgt], t.slow, t.arrival, s.typeCode, 'false', 'false', troops].join('&');
+    }).join('\n');
+  }
+
+  function placeUrl(result, t) {
+    const { ids, settings: s } = result;
+    const q = EXPORT_ORDER.filter(u => u !== 'militia').map(u => `${u}=${t.units[u] || ''}`).join('&');
+    return `https://${s.world}.die-staemme.de/game.php?village=${ids.byCoord[t.src]}&screen=place&target=${ids.byCoord[t.tgt]}&${q}`;
+  }
+
+  function exportFullBB(result) {
+    if (!result.tabs.length) return '';
+    const rows = result.tabs.map(t =>
+      `[*][coord]${t.src}[/coord][|][coord]${t.tgt}[/coord][|]${fmtTime(t.send)}[|]${fmtTime(t.arrival)}[|]${t.preset}[|]${result.ids.byCoord[t.src] && result.ids.byCoord[t.tgt] ? `[url=${placeUrl(result, t)}]Platz[/url]` : '-'}`);
+    return `[b]Tabplan[/b] – ${result.tabs.length} Tabs\n[table]\n[**]Von[||]Nach[||]Abschicken[||]Ankunft[||]Paket[||]Link[/**]\n${rows.join('\n')}\n[/table]`;
+  }
+
+  function exportOpenBB(result) {
+    const byV = {};
+    for (const sl of result.slots) if (sl.status === 'nopkg' || sl.status === 'unreachable' || sl.status === 'window') (byV[sl.target] = byV[sl.target] || []).push(sl);
+    const keys = Object.keys(byV).sort((a, b) => Math.max(...byV[b].map(x => x.score)) - Math.max(...byV[a].map(x => x.score)));
+    if (!keys.length) return 'Keine offenen Tab-Lücken.';
+    const parts = [`[b]Offene Tab-Lücken[/b] (Stand ${fmtTime(result.now)}) – bitte übernehmen, Ankunft auf die angegebene Sekunde:`];
+    for (const c of keys) {
+      const list = byV[c].sort((a, b) => a.arrival - b.arrival);
+      const v = result.targets.find(t => t.coord === c);
+      parts.push(`\n[b][coord]${c}[/coord][/b] – ${list.length} offen${v && v.wall != null ? ` · Wall ${v.wall}` : ''}\n[list]\n` +
+        list.map(sl => `[*]${fmtTime(sl.arrival)} → nächster Inc ${fmtTime(sl.next.t).slice(-8)} (+${Math.round(sl.gapSec)} s)`).join('\n') + '\n[/list]');
+    }
+    return parts.join('\n');
+  }
+
+  function exportPackages(result) {
+    const names = result.packages.presetNames;
+    const lines = result.packages.perVillage.filter(p => p.counts.some(c => c)).map(p => `${p.coord}  ` + names.map((n, i) => `${p.counts[i]}× ${n}`).join(' · '));
+    return lines.join('\n');
+  }
+
+  const API = { UNITS, UNIT_LABELS, BASE_SPEED, DEFAULT_PRESETS, DEFAULT_SETTINGS, parseSOS, parseTroops, parseVillageIds, parsePlan, parseOutgoing, parseThreats, parseUnitInfo, buildPackages, computeSlots, scoreSlot, solve, plan, exportDS, exportFullBB, exportOpenBB, exportPackages, placeUrl, travelSec, inWindows, fmtTime, fmtDur, unitsText };
+  root.TPEngine = API;
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function(){
+  'use strict';
+  const E = window.TPEngine, $ = id => document.getElementById(id);
+  const UNIT_KEYS = E.UNITS, L = E.UNIT_LABELS;
+  const STORE = 'tabbenplaner_v2';
+  const DEMO_IDS = $('demoIds').textContent;
+  const DEMO_SETTINGS = { world:'de254', unitSpeed:0.8, worldSpeed:1.25, speedSource:'Testdaten de254', speeds: Object.assign({}, E.BASE_SPEED) };
+  let demo = false, idText = '', idSource = '';
+  let state = { settings: JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), presets: JSON.parse(JSON.stringify(E.DEFAULT_PRESETS)) };
+  let result = null, exportTab = 'ds', timer = null, recalcT = null;
+
+  function load(){ try{ const raw = localStorage.getItem(STORE); if(raw){ const d = JSON.parse(raw);
+      if(d.settings) state.settings = Object.assign(state.settings, d.settings, {unitWeights:Object.assign({}, state.settings.unitWeights, d.settings.unitWeights||{}), speeds:Object.assign({}, state.settings.speeds, d.settings.speeds||{})});
+      if(Array.isArray(d.presets) && d.presets.length) state.presets = d.presets; } }catch(e){} }
+  function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){} }
+
+  // ---------- Einstellungen binden ----------
+  function fillInputs(){
+    document.querySelectorAll('[data-k]').forEach(el=>{
+      const v = state.settings[el.dataset.k];
+      if(el.type==='checkbox') el.checked = !!v; else el.value = v;
+      const out = el.parentElement.querySelector('output'); if(out) out.textContent = Number(v).toFixed(2).replace(/\.?0+$/,'');
+    });
+    document.querySelectorAll('[data-uw]').forEach(el=> el.value = state.settings.unitWeights[el.dataset.uw]);
+    UNIT_KEYS.forEach(k=>{ const el = $('spd_'+k); if(el) el.value = state.settings.speeds[k]; });
+  }
+  function bindSettings(){
+    document.querySelectorAll('[data-k]').forEach(el=>{
+      const k = el.dataset.k;
+      const out = el.parentElement.querySelector('output');
+      el.addEventListener('input', ()=>{
+        if(['unitSpeed','worldSpeed'].includes(k)) state.settings.speedSource = 'manuell';
+        state.settings[k] = el.type==='checkbox' ? el.checked : (el.type==='number'||el.type==='range'||el.tagName==='SELECT') ? (parseFloat(el.value)||0) : el.value;
+        if(out) out.textContent = String(state.settings[k]);
+        if(k==='world'){ loadIds(); updateWorld(); }
+        save(); schedule();
+      });
+    });
+    document.querySelectorAll('[data-uw]').forEach(el=>{
+      el.addEventListener('input', ()=>{ state.settings.unitWeights[el.dataset.uw] = parseFloat(el.value)||0; save(); schedule(); });
+    });
+    const sf = $('speedFields');
+    UNIT_KEYS.forEach(k=>{
+      const lab = document.createElement('label'); lab.htmlFor = 'spd_'+k; lab.textContent = L[k];
+      const inp = document.createElement('input'); inp.type='number'; inp.step='0.1'; inp.id='spd_'+k; inp.value = state.settings.speeds[k];
+      inp.addEventListener('input', ()=>{ state.settings.speeds[k] = parseFloat(inp.value)||E.BASE_SPEED[k]; state.settings.speedSource = 'manuell'; save(); updateWorld(); schedule(); });
+      lab.appendChild(inp); sf.appendChild(lab);
+    });
+    fillInputs();
+    $('sNow').addEventListener('input', schedule);
+  }
+
+  // ---------- Zeitfenster ----------
+  function renderWindows(){
+    const box = $('winList'); box.innerHTML = '';
+    state.settings.windows.forEach((w,i)=>{
+      const row = document.createElement('div'); row.className='win';
+      row.innerHTML = `<input type="time" id="winS${i}" value="${w.start}" aria-label="Fenster ${i+1} von"> bis <input type="time" id="winE${i}" value="${w.end}" aria-label="Fenster ${i+1} bis"> <button type="button" class="ghost" aria-label="Fenster entfernen">Entfernen</button>`;
+      const [a,b] = row.querySelectorAll('input');
+      a.addEventListener('input', ()=>{ w.start = a.value; save(); schedule(); });
+      b.addEventListener('input', ()=>{ w.end = b.value; save(); schedule(); });
+      row.querySelector('button').addEventListener('click', ()=>{ state.settings.windows.splice(i,1); save(); renderWindows(); schedule(); });
+      box.appendChild(row);
+    });
+    if(!state.settings.windows.length){ const p = document.createElement('p'); p.className='hint'; p.textContent='Kein Fenster: Abschicken jederzeit erlaubt.'; box.appendChild(p); }
+  }
+  $('btnAddWin').addEventListener('click', ()=>{ state.settings.windows.push({start:'20:00', end:'01:00'}); save(); renderWindows(); schedule(); });
+
+  // ---------- Presets ----------
+  function renderPresets(){
+    const box = $('presetList'); box.innerHTML = '';
+    state.presets.forEach((p,i)=>{
+      const el = document.createElement('div'); el.className = 'preset' + (p.active===false?' off':'');
+      el.innerHTML = `<div class="head">
+          <input type="checkbox" id="pa${i}" ${p.active!==false?'checked':''} aria-label="Paket aktiv">
+          <input type="text" id="pn${i}" value="${p.name.replace(/"/g,'&quot;')}" aria-label="Paketname">
+          <button type="button" class="ghost" data-a="up" aria-label="nach oben" ${i===0?'disabled':''}>▲</button>
+          <button type="button" class="ghost" data-a="down" aria-label="nach unten" ${i===state.presets.length-1?'disabled':''}>▼</button>
+          <button type="button" class="ghost" data-a="del" aria-label="Paket löschen">✕</button></div>
+        <div class="units">${UNIT_KEYS.map(k=>`<label for="pu${i}_${k}">${L[k]}<input type="number" min="0" step="10" id="pu${i}_${k}" data-u="${k}" value="${p.units[k]||0}"></label>`).join('')}</div>`;
+      el.querySelector(`#pa${i}`).addEventListener('change', e=>{ p.active = e.target.checked; el.classList.toggle('off', !p.active); save(); schedule(); });
+      el.querySelector(`#pn${i}`).addEventListener('input', e=>{ p.name = e.target.value || 'Paket'; save(); schedule(); });
+      el.querySelectorAll('[data-u]').forEach(inp=> inp.addEventListener('input', ()=>{ p.units[inp.dataset.u] = parseInt(inp.value,10)||0; save(); schedule(); }));
+      el.querySelectorAll('[data-a]').forEach(b=> b.addEventListener('click', ()=>{
+        const a = b.dataset.a;
+        if(a==='del') state.presets.splice(i,1);
+        if(a==='up' && i>0) [state.presets[i-1], state.presets[i]] = [state.presets[i], state.presets[i-1]];
+        if(a==='down' && i<state.presets.length-1) [state.presets[i+1], state.presets[i]] = [state.presets[i], state.presets[i+1]];
+        save(); renderPresets(); schedule();
+      }));
+      box.appendChild(el);
+    });
+  }
+  $('btnAddPreset').addEventListener('click', ()=>{ state.presets.push({name:'Neues Paket', active:true, units:{spear:100}}); save(); renderPresets(); schedule(); });
+  $('btnResetPresets').addEventListener('click', ()=>{ state.presets = JSON.parse(JSON.stringify(E.DEFAULT_PRESETS)); save(); renderPresets(); schedule(); });
+
+  // ---------- Berechnen ----------
+  function schedule(){ if(!result) return; clearTimeout(recalcT); recalcT = setTimeout(run, 350); }
+  ['inSos','inTroops','inPlan','inOut','inIds'].forEach(id=> $(id).addEventListener('input', ()=>{
+    if(id==='inSos'||id==='inTroops') demo = false;
+    clearTimeout(recalcT); recalcT = setTimeout(run, 500); }));
+
+  function run(){
+    const nowVal = $('sNow').value;
+    const settings = demo ? Object.assign({}, state.settings, DEMO_SETTINGS) : state.settings;
+    const input = { sos:$('inSos').value, troops:$('inTroops').value, plan:$('inPlan').value, outgoing:$('inOut').value,
+      ids: (demo ? DEMO_IDS : idText) + '\n' + $('inIds').value, presets: state.presets, settings,
+      now: nowVal ? new Date(nowVal).getTime() : null };
+    try{ result = E.plan(input); }
+    catch(err){ $('warnings').innerHTML = `<p>Berechnung fehlgeschlagen: ${esc(err.message)}. Prüfe die eingefügten Texte.</p>`; return; }
+    render();
+  }
+  $('btnCalc').addEventListener('click', run);
+  $('btnDemo').addEventListener('click', ()=>{
+    demo = true;
+    $('inSos').value = $('demoSos').textContent.trim(); $('inTroops').value = $('demoTroops').textContent.trim(); $('inPlan').value = ''; $('inOut').value = ''; $('sNow').value = '';
+    run();
+  });
+
+  const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const STATUS_TXT = {tab:'neu getabbt', existing:'schon unterwegs oder im Plan', nopkg:'Pakete aufgebraucht', window:'nur ausserhalb Zeitfenster', unreachable:'kein Dorf erreicht es', past:'vorbei / zu knapp', invalid:'Lücke zu klein', bunker:'Bunker, nicht getabbt'};
+
+  function render(){
+    const r = result, F = E.fmtTime;
+    const sos = r.targets, incs = sos.reduce((a,t)=>a+t.attacks.length,0);
+    $('psSos').textContent = sos.length ? `${sos.length} Dörfer · ${incs} Incs · ${r.slots.length} Lücken in Wellen` : 'nichts erkannt';
+    $('psTroops').textContent = r.villages.length ? `${r.villages.length} eigene Dörfer${r.now ? '' : ''}` : 'nichts erkannt';
+    const outHits = r.slots.filter(s=>s.existing && s.existing.kind==='unterwegs').length;
+    $('psOut').textContent = r.outgoing.length ? `${r.outgoing.length} Unterstützungen gelesen, ${outHits} davon in Tab-Lücken` : ($('inOut').value.trim() ? 'keine Befehle erkannt' : '–');
+    $('psPlan').textContent = r.existing.rows.length ? `${r.existing.rows.length} Planzeilen gelesen` : (($('inPlan').value.trim()) ? 'keine gültigen Zeilen' : '–');
+    $('stamp').textContent = `Referenz ${F(r.now)} · ${r.nowSource}`;
+    $('nowInfo').textContent = `Aktuell gerechnet mit ${F(r.now)} (${r.nowSource}).`;
+
+    const cnt = st => r.slots.filter(s=>s.status===st).length;
+    const reachable = r.slots.filter(s=>['tab','existing','nopkg','window','unreachable'].includes(s.status)).length;
+    const nBunker = sos.filter(t=>t.bunker).length;
+    const pkTotal = r.packages.groups.reduce((a,g)=>a+g.count,0), pkUsed = r.tabs.length;
+    const villagesCovered = new Set(r.slots.filter(s=>s.status==='tab'||s.status==='existing').map(s=>s.target)).size;
+    $('kpis').innerHTML = [
+      ['Neue Tabs', r.tabs.length], ['Lücken abgedeckt', `${cnt('tab')+cnt('existing')}/${reachable}`],
+      ['Dörfer abgedeckt', `${villagesCovered}/${sos.length - nBunker}`], ['Pakete genutzt', `${pkUsed}/${pkTotal}`],
+      ['Nächster Abschick', r.tabs.length ? F(r.tabs[0].send).slice(-8) : '–']
+    ].map(([k,v])=>`<div class="kpi"><span>${k}</span><strong>${v}</strong></div>`).join('');
+    $('warnings').innerHTML = r.warnings.map(w=>`<p>${esc(w)}</p>`).join('');
+    $('demoBanner').hidden = !demo;
+
+    // Abdeckung je Dorf, sortiert nach Anzahl Incs
+    const rows = sos.slice().sort((a,b)=>b.attacks.length-a.attacks.length).map(t=>{
+      const sl = r.slots.filter(s=>s.target===t.coord);
+      let cells = '', lastWave = -1;
+      sl.forEach(s=>{
+        if(lastWave>=0 && s.wave!==lastWave) cells += '<i class="wave" aria-hidden="true"></i>';
+        lastWave = s.wave;
+        const p = s.parts||{};
+        cells += `<i class="s-${s.status}" title="${F(s.arrival)} · Lücke ${Math.round(s.gapSec)} s · ${STATUS_TXT[s.status]} · Wert ${s.score.toFixed(2)}${p.tf>1?' · Bedrohung ×'+p.tf:''}"></i>`;
+      });
+      const covered = sl.filter(s=>s.status==='tab'||s.status==='existing').length;
+      const deff = t.bunker ? `<span class="chip exist">Bunker · ${t.foreign.toLocaleString('de-CH')} fremd</span>` : t.defPower==null ? '' : t.defPower < 50000 ? '<span class="chip bad">Deff schwach</span>' : t.defPower < 300000 ? '<span class="chip warn">Deff mittel</span>' : '<span class="chip ok">Deff stark</span>';
+      return `<div class="covrow"><span class="c">${t.coord}</span>
+        <span class="meta">${t.attacks.length} Incs · ${t.waves.length} Welle${t.waves.length>1?'n':''}<br>${covered}/${sl.length} getabbt ${t.wall!=null?'· Wall '+t.wall:''}<br>${deff}</span>
+        <div class="strip" aria-label="Lücken von ${t.coord}">${cells || '<span class="hint">keine Lücken</span>'}</div></div>`;
+    });
+    $('coverage').innerHTML = rows.join('') || '<p class="empty">Keine angegriffenen Dörfer erkannt.</p>';
+
+    // Plan
+    const tb = $('planTable').querySelector('tbody');
+    tb.innerHTML = r.tabs.map((t,i)=>`<tr data-send="${t.send}">
+        <td class="t">${F(t.send)}<span class="cd" id="cd${i}"></span></td>
+        <td class="t">${t.src}</td><td class="t">${t.tgt}</td><td class="t">${F(t.arrival)}</td>
+        <td>${esc(t.preset)}</td><td class="num">${E.fmtDur(t.tsec)}</td><td class="num">${t.score.toFixed(2)}</td>
+        <td>${r.ids.byCoord[t.src]&&r.ids.byCoord[t.tgt] ? `<a href="${E.placeUrl(r,t)}" target="_blank" rel="noopener">öffnen</a>` : '<span class="chip bad">ID fehlt</span>'}</td></tr>`).join('')
+      || `<tr><td colspan="8" class="empty">Keine neuen Tabs möglich. Prüfe Zeitfenster, Vorlauf und Pakete.</td></tr>`;
+    $('planInfo').textContent = r.tabs.length ? `${r.tabs.length} Befehle, sortiert nach Abschickzeit` : '';
+    tick(); clearInterval(timer); timer = setInterval(tick, 1000);
+
+    // Pakete je Dorf
+    const names = r.packages.presetNames;
+    $('pkTable').querySelector('thead').innerHTML = `<tr><th>Dorf</th>${names.map(n=>`<th>${esc(n)}</th>`).join('')}<th>Genutzt</th></tr>`;
+    $('pkTable').querySelector('tbody').innerHTML = r.packages.perVillage.filter(p=>p.counts.some(c=>c)).map(p=>{
+      const used = r.packages.groups.filter(g=>g.coord===p.coord).reduce((a,g)=>a+g.used,0), tot = p.counts.reduce((a,b)=>a+b,0);
+      return `<tr><td class="t">${p.coord}</td>${p.counts.map(c=>`<td class="num">${c||'·'}</td>`).join('')}<td class="num">${used}/${tot}</td></tr>`;
+    }).join('') || `<tr><td class="empty">Kein Dorf hat genug Truppen für ein aktives Paket.</td></tr>`;
+    showExport(exportTab);
+  }
+
+  // Countdown – relativ zur Referenzzeit (im Testmodus läuft die Uhr ab der Serverzeit)
+  let startedAt = Date.now();
+  function tick(){
+    if(!result) return;
+    const live = result.now + (Date.now() - startedAt);
+    document.querySelectorAll('#planTable tbody tr[data-send]').forEach((tr,i)=>{
+      const d = (+tr.dataset.send - live)/1000, cd = tr.querySelector('.cd');
+      tr.classList.toggle('gone', d < 0); tr.classList.toggle('due-now', d >= 0 && d < 300); tr.classList.toggle('due-soon', d >= 300 && d < 1200);
+      if(cd) cd.textContent = d < 0 ? 'vorbei' : 'in ' + E.fmtDur(d);
+    });
+  }
+  const _run = run; run = function(){ startedAt = Date.now(); _run(); };
+  $('btnCalc').removeEventListener('click', _run); $('btnCalc').addEventListener('click', ()=>run());
+
+  // ---------- Export ----------
+  const HINTS = {
+    ds: r=>`${(E.exportDS(r).match(/\n/g)||[]).length + (r.tabs.length?1:0)} Zeilen für den Import im DS-Ultimate-Angriffsplaner. Bei bestehendem Plan nur neue Zeilen.`,
+    open: ()=>'Lücken, die deine Dörfer nicht abdecken. Zum Posten im Stammesforum, nach Dorf gruppiert.',
+    full: ()=>'Alle neuen Tabs als Forum-Tabelle mit Versammlungsplatz-Link.',
+    pk: ()=>'Paketaufteilung je Dorf, als Text.'
+  };
+  function showExport(x){
+    exportTab = x;
+    document.querySelectorAll('#exportTabs button').forEach(b=> b.setAttribute('aria-selected', String(b.dataset.x===x)));
+    if(!result){ $('exportText').value=''; $('exportHint').textContent=''; return; }
+    $('exportText').value = x==='ds' ? E.exportDS(result) : x==='open' ? E.exportOpenBB(result) : x==='full' ? E.exportFullBB(result) : E.exportPackages(result);
+    $('exportHint').textContent = HINTS[x](result);
+    $('copyInfo').textContent = '';
+  }
+  document.querySelectorAll('#exportTabs button').forEach(b=> b.addEventListener('click', ()=>showExport(b.dataset.x)));
+  $('btnCopy').addEventListener('click', ()=>{
+    const ta = $('exportText');
+    const fallback = ()=>{ ta.focus(); ta.select(); $('copyInfo').textContent = 'Markiert – mit Strg+C kopieren.'; };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(()=>{ $('copyInfo').textContent = 'Kopiert.'; }, fallback);
+    else fallback();
+  });
+
+  // ---------- Dorf-IDs & Weltdaten ----------
+  const idKey = ()=> 'tabbenplaner_ids_' + state.settings.world;
+  function setIds(text, source){
+    const parsed = E.parseVillageIds(text), n = Object.keys(parsed.byCoord).length;
+    if(!n) return false;
+    idText = Object.entries(parsed.byCoord).map(([c,id])=>`${c}=${id}`).join('\n'); idSource = source;
+    try{ localStorage.setItem(idKey(), JSON.stringify({text:idText, source, at:Date.now()})); }catch(e){}
+    showIdInfo(); return true;
+  }
+  function showIdInfo(){
+    const n = idText ? idText.split('\n').length : 0;
+    const txt = n ? `${n.toLocaleString('de-CH')} Dorf-IDs für ${state.settings.world} (${idSource})` : `Keine Dorf-IDs für ${state.settings.world}: village.txt unter „Welt & Export“ laden, sonst fehlen die DS-Ultimate-Zeilen.`;
+    $('psIds').textContent = 'Dorf-IDs: ' + (n ? n.toLocaleString('de-CH') + ' (' + idSource + ')' : 'fehlen');
+    $('idInfo').textContent = txt;
+  }
+  function loadIds(){
+    idText = ''; idSource = '';
+    try{ const c = JSON.parse(localStorage.getItem(idKey())||'null'); if(c && c.text){ idText = c.text; idSource = c.source + ', ' + new Date(c.at).toLocaleDateString('de-CH'); } }catch(e){}
+    showIdInfo();
+    // Auf dem eigenen Server liegen village.txt und unit_info.xml neben der Seite
+    if(!window.fetch) return;
+    fetch('village.txt', {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject()).then(t=>{ if(setIds(t, 'Server, aktuell')) schedule(); }).catch(()=>{});
+    fetch('unit_info.xml', {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject()).then(x=>{
+      const sp = E.parseUnitInfo(x); if(!sp) return;
+      Object.assign(state.settings, {speeds: sp, unitSpeed:1, worldSpeed:1, speedSource:'unit_info.xml vom Server'});
+      UNIT_KEYS.forEach(k=>{ const el = $('spd_'+k); if(el) el.value = sp[k]; });
+      $('sUnit').value = 1; $('sSpeed').value = 1; updateWorld(); schedule();
+    }).catch(()=>{});
+  }
+  function updateWorld(){
+    const w = state.settings.world;
+    $('worldTag').textContent = 'v2 · ' + w;
+    $('vtUrl').textContent = `https://${w}.die-staemme.de/map/village.txt`;
+    $('speedInfo').textContent = state.settings.speedSource ? `Laufzeiten: ${state.settings.speedSource}.` : 'Laufzeiten noch nicht bestätigt: Werte der Welt eintragen (Spielgeschw. × Einheitengeschw. wirken zusammen).';
+  }
+  $('fileVillage').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ()=>{ if(!setIds(rd.result, 'hochgeladen')) $('idInfo').textContent = 'Datei nicht erkannt. Erwartet wird village.txt im Format id,name,x,y,…'; else schedule(); };
+    rd.readAsText(f);
+  });
+  // Einstellungen teilen
+  $('btnShareOut').addEventListener('click', ()=>{ $('inShare').value = JSON.stringify(state); $('inShare').select(); $('shareInfo').textContent = 'Text markiert, kopieren und weitergeben.'; });
+  $('btnShareIn').addEventListener('click', ()=>{
+    let d; try{ d = JSON.parse($('inShare').value); }catch(e){}
+    if(!d || !d.settings || !Array.isArray(d.presets)){ $('shareInfo').textContent = 'Text nicht erkannt. Erwartet wird der Text aus „Meine Einstellungen als Text“.'; return; }
+    state.settings = Object.assign(JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), d.settings);
+    state.presets = d.presets; save();
+    fillInputs(); renderWindows(); renderPresets(); updateWorld(); loadIds(); schedule();
+    $('shareInfo').textContent = 'Übernommen.';
+  });
+
+  load(); bindSettings(); renderWindows(); renderPresets(); showExport('ds'); updateWorld(); loadIds();
+  // Startzustand: Testdaten anzeigen, damit sichtbar ist, was das Tool macht
+  $('btnDemo').click();
+})();
+</script>
