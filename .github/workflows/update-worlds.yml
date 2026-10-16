@@ -1,0 +1,32 @@
+name: Weltdaten aktualisieren
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"   # alle 6 Stunden
+  workflow_dispatch:          # manuell über den Actions-Tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weltdaten
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Welten und Weltdaten holen
+        env:
+          WORLDS: de258   # wird immer geholt, auch wenn die Weltliste nicht erreichbar ist
+        run: python3 tools/update_worlds.py
+
+      - name: Änderungen committen
+        run: |
+          git config user.name "weltdaten-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add worlds
+          git diff --cached --quiet || git commit -m "Weltdaten aktualisiert"
+          git push

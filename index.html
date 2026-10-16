@@ -107,6 +107,11 @@ a{color:var(--accent)}
 .tabs button{border:none; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted); padding:6px 10px}
 .tabs button[aria-selected="true"]{color:var(--fg); border-bottom-color:var(--accent); font-weight:700}
 #exportText{min-height:200px}
+.worldpick{flex-direction:row; align-items:center; gap:6px; font-size:.9rem; color:var(--fg)}
+.worldpick select{font-family:var(--f-mono); font-weight:600}
+.welcome{border-color:var(--accent); background:var(--exist-soft)}
+.welcome h2{color:var(--fg)}
+.welcome .row select{min-width:220px}
 .banner{font-size:.85rem; background:var(--exist-soft); color:var(--exist); padding:6px 10px; border-radius:4px; margin:0}
 input[type=file]{font-size:.8rem; padding:4px}
 .empty{color:var(--muted); font-size:.9rem; margin:0}
@@ -119,12 +124,20 @@ input[type=file]{font-size:.8rem; padding:4px}
     <div>
       <h1>Tabben-Planer <small id="worldTag">v2</small></h1>
       <p class="lead">Kleine Deff-Pakete exakt in die Lücken zwischen eingehenden Angriffen legen, um Kattasplits abzufangen.</p>
+      <p class="parsed" id="worldInfo"></p>
     </div>
     <div class="row">
+      <label class="worldpick" for="worldSel" id="worldPick" hidden>Welt <select id="worldSel"></select></label>
       <button id="btnDemo" type="button">Testdaten 02.08. laden</button>
       <button id="btnCalc" class="primary" type="button">Berechnen</button>
     </div>
   </header>
+
+  <section class="panel welcome" id="welcome" hidden>
+    <h2>Welt wählen</h2>
+    <p class="hint">Laufzeiten, Einheiten, Deffwerte und Dorf-IDs werden für die gewählte Welt automatisch geladen. Die Auswahl wird gespeichert und steht danach oben rechts.</p>
+    <div class="row"><select id="worldFirst" aria-label="Welt"></select><button id="btnWorldFirst" class="primary" type="button">Welt übernehmen</button></div>
+  </section>
 
   <div class="grid">
     <!-- Linke Spalte: Eingaben -->
@@ -197,7 +210,7 @@ input[type=file]{font-size:.8rem; padding:4px}
             <label for="sMinGap">Min. Lücke (s)<input id="sMinGap" type="number" min="0" data-k="minGapSec"></label>
             <label for="sLand">Landung + s nach Inc<input id="sLand" type="number" min="0" data-k="landOffsetSec"></label>
           </div>
-          <p class="hint">Welt ohne Millisekunden: Der Tab landet auf der Sekunde des früheren Incs. Befehle derselben Sekunde werden in Abschickreihenfolge verrechnet, der später abgeschickte Tab kommt also nach diesem Inc an.</p>
+          <p class="hint" id="landHint"></p>
           <p class="hint">Abschickfenster (täglich). Fenster über Mitternacht in einer Zeile, z.&nbsp;B. 20:45–01:00. Keine Zeile = jederzeit.</p>
           <div id="winList" class="inner"></div>
           <div class="row">
@@ -212,6 +225,7 @@ input[type=file]{font-size:.8rem; padding:4px}
 
       <details class="panel" id="detWorld">
         <summary><span class="step"><b>5</b><h2>Welt &amp; Export</h2></span></summary>
+        <p class="hint" id="manualHint">Wird automatisch aus der gewählten Welt befüllt. Nur ändern, wenn keine Weltdaten verfügbar sind.</p>
         <div class="inner">
           <div class="fields">
             <label for="sWorld">Welt<input id="sWorld" type="text" data-k="world"></label>
@@ -221,7 +235,7 @@ input[type=file]{font-size:.8rem; padding:4px}
               <option value="5">5 Unterstützung</option><option value="6">6 Stand Unterstützung</option>
               <option value="7">7 Schnelle Unterstützung</option><option value="8">8 Fake Unterstützung</option></select></label>
           </div>
-          <p class="hint">Minuten pro Feld bei Geschwindigkeit 1:</p>
+          <p class="hint">Minuten pro Feld (bei Weltdaten bereits umgerechnet, Faktoren dann 1):</p>
           <div class="fields" id="speedFields"></div>
           <p class="hint" id="speedInfo"></p>
           <label for="fileVillage">Dorfliste der Welt (village.txt von <span id="vtUrl">…/map/village.txt</span>)
@@ -757,15 +771,17 @@ Desktop-Version
 (function (root) {
   'use strict';
 
-  // Reihenfolge der Spalten in Truppenübersicht und Verteidiger-Zeile
+  // Standard-Spaltenreihenfolge (Welt ohne Bogen/Paladin). Je Welt kommt die echte Reihenfolge aus den Weltdaten (settings.units).
   const UNITS = ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'ram', 'catapult', 'snob'];
-  const UNIT_LABELS = { spear: 'Speer', sword: 'Schwert', axe: 'Axt', spy: 'Späher', light: 'LKav', heavy: 'SKav', ram: 'Ramme', catapult: 'Kata', snob: 'AG' };
+  // alle möglichen Einheiten (ohne Miliz) in Spielreihenfolge
+  const ALL = ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob'];
+  const UNIT_LABELS = { spear: 'Speer', sword: 'Schwert', axe: 'Axt', archer: 'Bogen', spy: 'Späher', light: 'LKav', marcher: 'BBogen', heavy: 'SKav', ram: 'Ramme', catapult: 'Kata', knight: 'Paladin', snob: 'AG' };
   // DS-Ultimate-Exportreihenfolge (13 Slots)
   const EXPORT_ORDER = ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult', 'knight', 'snob', 'militia'];
   // Minuten pro Feld bei Geschwindigkeit 1
-  const BASE_SPEED = { spear: 18, sword: 22, axe: 18, spy: 9, light: 10, heavy: 11, ram: 30, catapult: 30, snob: 35 };
+  const BASE_SPEED = { spear: 18, sword: 22, axe: 18, archer: 18, spy: 9, light: 10, marcher: 10, heavy: 11, ram: 30, catapult: 30, knight: 10, snob: 35 };
   // grobe Deffkraft je Einheit: Mittel aus allgemeiner und Kavallerie-Verteidigung
-  const DEF_VALUE = { spear: 30, sword: 32.5, axe: 7.5, spy: 1.5, light: 35, heavy: 140, ram: 35, catapult: 75, snob: 75 };
+  const DEF_VALUE = { spear: 30, sword: 32.5, axe: 7.5, archer: 45, spy: 1.5, light: 35, marcher: 35, heavy: 140, ram: 35, catapult: 75, knight: 125, snob: 75 };
 
   const DEFAULT_PRESETS = [
     { name: 'Dual SD 200', active: true, units: { spear: 200, sword: 200 } },
@@ -778,6 +794,9 @@ Desktop-Version
     unitSpeed: 1, worldSpeed: 1,
     speedSource: '',       // leer = Weltgeschwindigkeit noch nicht bestätigt
     speeds: Object.assign({}, BASE_SPEED),
+    units: UNITS.slice(),  // Spaltenreihenfolge der Welt
+    defValues: null,       // aus Weltdaten, sonst DEF_VALUE
+    millis: false,
     typeCode: 6,
     // Lücken
     waveBreakMin: 30,      // Pause > X Min = neue Welle
@@ -804,10 +823,11 @@ Desktop-Version
   function b64enc(s) { return typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'binary').toString('base64'); }
   function b64dec(s) { try { return typeof atob === 'function' ? atob(s) : Buffer.from(s, 'base64').toString('binary'); } catch (e) { return ''; } }
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-  function unitsText(u) { return UNITS.filter(k => u[k] > 0).map(k => `${u[k]} ${UNIT_LABELS[k]}`).join(', '); }
+  function unitsText(u) { return ALL.filter(k => u[k] > 0).map(k => `${u[k]} ${UNIT_LABELS[k]}`).join(', '); }
 
   // ---------- Parser ----------
-  function parseSOS(text) {
+  function parseSOS(text, cols) {
+    cols = cols || UNITS;
     const out = [];
     const blocks = String(text || '').split(/\[b\]Dorf:\[\/b\]/i).slice(1);
     for (const block of blocks) {
@@ -819,7 +839,7 @@ Desktop-Version
       const dm = block.match(/Verteidiger:\[\/b\]\s*([\d\s]+)/i);
       if (dm) {
         const nums = dm[1].trim().split(/\s+/).map(Number);
-        if (nums.length >= 9) { v.def = {}; UNITS.forEach((k, i) => v.def[k] = nums[i]); }
+        if (nums.length >= cols.length) { v.def = {}; cols.forEach((k, i) => v.def[k] = nums[i]); }
       }
       for (const line of block.split('\n')) {
         const tm = line.match(/Ankunftszeit:\s*(\d{2})\.(\d{2})\.(\d{2,4})\s+(\d{2}):(\d{2}):(\d{2})(?::(\d{3}))?/);
@@ -841,7 +861,8 @@ Desktop-Version
   }
 
   // Truppenübersicht: Zeile mit "(x|y) Kxx" und "eigene <9 Zahlen> Befehle"
-  function parseTroops(text) {
+  function parseTroops(text, cols) {
+    cols = cols || UNITS;
     const villages = [];
     let serverTime = null;
     for (const raw of String(text || '').split('\n')) {
@@ -852,10 +873,11 @@ Desktop-Version
       const em = line.match(/eigene\s+([\d\s]+?)\s*Befehle/);
       if (!cm || !em) continue;
       const nums = em[1].trim().split(/\s+/).map(Number);
-      if (nums.length < 9) continue;
+      if (nums.length < cols.length) continue;
       const nm = line.match(/^(.*?)\s*\(\d+\|\d+\)/);
       const troops = {};
-      UNITS.forEach((k, i) => troops[k] = nums[i]);
+      ALL.forEach(k => troops[k] = 0);
+      cols.forEach((k, i) => troops[k] = nums[i]);
       const coord = `${cm[1]}|${cm[2]}`;
       if (!villages.some(v => v.coord === coord)) villages.push({ coord, x: +cm[1], y: +cm[2], name: nm ? nm[1] : coord, troops });
     }
@@ -879,7 +901,8 @@ Desktop-Version
 
   // Übersichten → Befehle → Unterstützung:
   // "Unterstützung für Name (x|y) Kxx <TAB> Herkunft (x|y) Kxx <TAB> morgen um 05:15:33 <TAB> 9 Truppenzahlen"
-  function parseOutgoing(text, fallbackNow) {
+  function parseOutgoing(text, fallbackNow, cols) {
+    cols = cols || UNITS;
     const rows = [];
     let base = null;
     const lines = String(text || '').split('\n');
@@ -903,9 +926,8 @@ Desktop-Version
       }
       d.setHours(+tm[5], +tm[6], +tm[7], 0);
       const nums = l.slice(l.indexOf(tm[0]) + tm[0].length).trim().split(/\s+/).filter(x => /^\d+$/.test(x)).map(Number);
-      const order = nums.length >= 10 ? ['spear', 'sword', 'axe', 'spy', 'light', 'heavy', 'ram', 'catapult', 'knight', 'snob'] : UNITS;
       const units = {};
-      order.forEach((k, i) => { if (nums[i] > 0 && k !== 'knight') units[k] = nums[i]; });
+      cols.forEach((k, i) => { if (nums[i] > 0 && k !== 'knight') units[k] = nums[i]; });
       rows.push({ tgt: coords[0], src: coords[1], arrival: d.getTime(), units, kind: 'unterwegs' });
     }
     return rows;
@@ -932,7 +954,7 @@ Desktop-Version
   // unit_info.xml (interface.php?func=get_unit_info): Minuten pro Feld inkl. Welt- und Einheitengeschwindigkeit
   function parseUnitInfo(xml) {
     const speeds = {};
-    for (const k of UNITS) {
+    for (const k of ALL) {
       const m = String(xml || '').match(new RegExp('<' + k + '>[\\s\\S]*?<speed>([\\d.]+)</speed>'));
       if (m) speeds[k] = parseFloat(m[1]);
     }
@@ -955,7 +977,7 @@ Desktop-Version
   // ---------- Laufzeit / Zeitfenster ----------
   function slowestUnit(units, speeds) {
     let best = null;
-    for (const k of UNITS) if ((units[k] || 0) > 0 && (!best || speeds[k] > speeds[best])) best = k;
+    for (const k of ALL) if ((units[k] || 0) > 0 && (!best || speeds[k] > speeds[best])) best = k;
     return best;
   }
   function travelSec(from, to, unit, s) {
@@ -975,14 +997,14 @@ Desktop-Version
   // ---------- Pakete bilden ----------
   // Reihum nach Preset-Reihenfolge je ein Paket bilden, solange Truppen reichen.
   function buildPackages(villages, presets, s, opts) {
-    const active = presets.map((p, i) => Object.assign({ idx: i }, p)).filter(p => p.active !== false && UNITS.some(k => (p.units[k] || 0) > 0));
+    const active = presets.map((p, i) => Object.assign({ idx: i }, p)).filter(p => p.active !== false && ALL.some(k => (p.units[k] || 0) > 0));
     const exclude = (opts && opts.exclude) || new Set();
     const reserved = (opts && opts.reserved) || {};
     const groups = [], perVillage = [];
     for (const v of villages) {
       const stock = {};
-      for (const k of UNITS) {
-        const free = Math.max(0, v.troops[k] - ((reserved[v.coord] || {})[k] || 0));
+      for (const k of ALL) {
+        const free = Math.max(0, (v.troops[k] || 0) - ((reserved[v.coord] || {})[k] || 0));
         stock[k] = Math.floor(free * (1 - s.reservePct / 100));
       }
       const counts = active.map(() => 0);
@@ -991,8 +1013,8 @@ Desktop-Version
         while (progress) {
           progress = false;
           active.forEach((p, i) => {
-            if (UNITS.every(k => stock[k] >= (p.units[k] || 0))) {
-              UNITS.forEach(k => stock[k] -= (p.units[k] || 0));
+            if (ALL.every(k => stock[k] >= (p.units[k] || 0))) {
+              ALL.forEach(k => stock[k] -= (p.units[k] || 0));
               counts[i]++; progress = true;
             }
           });
@@ -1001,7 +1023,7 @@ Desktop-Version
       perVillage.push({ coord: v.coord, name: v.name, counts, rest: stock, excluded: exclude.has(v.coord) });
       active.forEach((p, i) => {
         if (!counts[i]) return;
-        const units = {}; UNITS.forEach(k => units[k] = p.units[k] || 0);
+        const units = {}; ALL.forEach(k => units[k] = p.units[k] || 0);
         const slow = slowestUnit(units, s.speeds);
         groups.push({ id: groups.length, coord: v.coord, x: v.x, y: v.y, name: v.name, preset: p.name, presetIdx: p.idx, units, slow, count: counts[i] });
       });
@@ -1024,7 +1046,8 @@ Desktop-Version
       if (cur.length) waves.push(cur);
       v.waves = waves.map(w => ({ start: w[0].t, end: w[w.length - 1].t, count: w.length }));
       let defPower = null;
-      if (v.def) defPower = UNITS.reduce((sum, k) => sum + v.def[k] * DEF_VALUE[k], 0) * Math.pow(1.037, v.wall || 0);
+      const DV = s.defValues || DEF_VALUE;
+      if (v.def) defPower = ALL.reduce((sum, k) => sum + (v.def[k] || 0) * (DV[k] || 0), 0) * Math.pow(1.037, v.wall || 0);
       v.defPower = defPower;
       waves.forEach((w, wi) => {
         const n = w.length - 1;
@@ -1142,8 +1165,9 @@ Desktop-Version
     s.speeds = Object.assign({}, BASE_SPEED, (input.settings || {}).speeds || {});
     s.unitWeights = Object.assign({}, DEFAULT_SETTINGS.unitWeights, (input.settings || {}).unitWeights || {});
     const warnings = [];
-    const targets = parseSOS(input.sos);
-    const tr = parseTroops(input.troops);
+    const cols = Array.isArray(s.units) && s.units.length ? s.units : UNITS;
+    const targets = parseSOS(input.sos, cols);
+    const tr = parseTroops(input.troops, cols);
     const ids = parseVillageIds(input.ids || '');
     const threats = parseThreats(s.threats);
 
@@ -1158,7 +1182,7 @@ Desktop-Version
 
     // Bestehender Plan
     const existing = parsePlan(input.plan, ids);
-    const outgoing = parseOutgoing(input.outgoing, now);
+    const outgoing = parseOutgoing(input.outgoing, now, cols);
     if (existing.unknown.length) warnings.push(`${existing.unknown.length} Planzeilen mit unbekannter Dorf-ID ignoriert.`);
     const reserved = {}; // noch nicht abgeschickte, aber verplante Truppen
     for (const r of existing.rows) {
@@ -1172,11 +1196,11 @@ Desktop-Version
     }
 
     // Bunker: Verteidiger laut SOS minus eigene Truppen = Fremddeff
-    const DEFF = ['spear', 'sword', 'heavy'];
+    const DEFF = ['spear', 'sword', 'archer', 'heavy'];
     for (const t of targets) {
       const own = tr.villages.find(v => v.coord === t.coord);
-      const inVillage = t.def ? DEFF.reduce((a, k) => a + t.def[k], 0) : null;
-      t.foreign = inVillage == null ? null : Math.max(0, inVillage - (own ? DEFF.reduce((a, k) => a + own.troops[k], 0) : 0));
+      const inVillage = t.def ? DEFF.reduce((a, k) => a + (t.def[k] || 0), 0) : null;
+      t.foreign = inVillage == null ? null : Math.max(0, inVillage - (own ? DEFF.reduce((a, k) => a + (own.troops[k] || 0), 0) : 0));
       t.bunker = !!(s.skipBunker && t.foreign != null && t.foreign >= s.bunkerMin);
     }
     const bunkers = new Set(targets.filter(t => t.bunker).map(t => t.coord));
@@ -1285,7 +1309,7 @@ Desktop-Version
     return lines.join('\n');
   }
 
-  const API = { UNITS, UNIT_LABELS, BASE_SPEED, DEFAULT_PRESETS, DEFAULT_SETTINGS, parseSOS, parseTroops, parseVillageIds, parsePlan, parseOutgoing, parseThreats, parseUnitInfo, buildPackages, computeSlots, scoreSlot, solve, plan, exportDS, exportFullBB, exportOpenBB, exportPackages, placeUrl, travelSec, inWindows, fmtTime, fmtDur, unitsText };
+  const API = { UNITS, ALL, UNIT_LABELS, DEF_VALUE, BASE_SPEED, DEFAULT_PRESETS, DEFAULT_SETTINGS, parseSOS, parseTroops, parseVillageIds, parsePlan, parseOutgoing, parseThreats, parseUnitInfo, buildPackages, computeSlots, scoreSlot, solve, plan, exportDS, exportFullBB, exportOpenBB, exportPackages, placeUrl, travelSec, inWindows, fmtTime, fmtDur, unitsText };
   root.TPEngine = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1295,10 +1319,12 @@ Desktop-Version
 (function(){
   'use strict';
   const E = window.TPEngine, $ = id => document.getElementById(id);
-  const UNIT_KEYS = E.UNITS, L = E.UNIT_LABELS;
+  const L = E.UNIT_LABELS;
+  const cols = ()=> (state.settings.units && state.settings.units.length) ? state.settings.units : E.UNITS;
+  let worlds = null; // aus worlds/index.json
   const STORE = 'tabbenplaner_v2';
   const DEMO_IDS = $('demoIds').textContent;
-  const DEMO_SETTINGS = { world:'de254', unitSpeed:0.8, worldSpeed:1.25, speedSource:'Testdaten de254', speeds: Object.assign({}, E.BASE_SPEED) };
+  const DEMO_SETTINGS = { world:'de254', unitSpeed:0.8, worldSpeed:1.25, speedSource:'Testdaten de254', speeds: Object.assign({}, E.BASE_SPEED), units: E.UNITS.slice(), defValues: null, millis: false, landOffsetSec: 0 };
   let demo = false, idText = '', idSource = '';
   let state = { settings: JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), presets: JSON.parse(JSON.stringify(E.DEFAULT_PRESETS)) };
   let result = null, exportTab = 'ds', timer = null, recalcT = null;
@@ -1316,7 +1342,16 @@ Desktop-Version
       const out = el.parentElement.querySelector('output'); if(out) out.textContent = Number(v).toFixed(2).replace(/\.?0+$/,'');
     });
     document.querySelectorAll('[data-uw]').forEach(el=> el.value = state.settings.unitWeights[el.dataset.uw]);
-    UNIT_KEYS.forEach(k=>{ const el = $('spd_'+k); if(el) el.value = state.settings.speeds[k]; });
+    cols().forEach(k=>{ const el = $('spd_'+k); if(el) el.value = state.settings.speeds[k] ?? E.BASE_SPEED[k]; });
+  }
+  function renderSpeedFields(){
+    const sf = $('speedFields'); sf.innerHTML = '';
+    cols().forEach(k=>{
+      const lab = document.createElement('label'); lab.htmlFor = 'spd_'+k; lab.textContent = L[k] || k;
+      const inp = document.createElement('input'); inp.type='number'; inp.step='0.01'; inp.id='spd_'+k; inp.value = state.settings.speeds[k] ?? E.BASE_SPEED[k];
+      inp.addEventListener('input', ()=>{ state.settings.speeds[k] = parseFloat(inp.value)||E.BASE_SPEED[k]; state.settings.speedSource = 'manuell'; save(); updateWorld(); schedule(); });
+      lab.appendChild(inp); sf.appendChild(lab);
+    });
   }
   function bindSettings(){
     document.querySelectorAll('[data-k]').forEach(el=>{
@@ -1326,20 +1361,14 @@ Desktop-Version
         if(['unitSpeed','worldSpeed'].includes(k)) state.settings.speedSource = 'manuell';
         state.settings[k] = el.type==='checkbox' ? el.checked : (el.type==='number'||el.type==='range'||el.tagName==='SELECT') ? (parseFloat(el.value)||0) : el.value;
         if(out) out.textContent = String(state.settings[k]);
-        if(k==='world'){ loadIds(); updateWorld(); }
+        if(k==='world'){ state.settings.speedSource = ''; loadIds(); updateWorld(); }
         save(); schedule();
       });
     });
     document.querySelectorAll('[data-uw]').forEach(el=>{
       el.addEventListener('input', ()=>{ state.settings.unitWeights[el.dataset.uw] = parseFloat(el.value)||0; save(); schedule(); });
     });
-    const sf = $('speedFields');
-    UNIT_KEYS.forEach(k=>{
-      const lab = document.createElement('label'); lab.htmlFor = 'spd_'+k; lab.textContent = L[k];
-      const inp = document.createElement('input'); inp.type='number'; inp.step='0.1'; inp.id='spd_'+k; inp.value = state.settings.speeds[k];
-      inp.addEventListener('input', ()=>{ state.settings.speeds[k] = parseFloat(inp.value)||E.BASE_SPEED[k]; state.settings.speedSource = 'manuell'; save(); updateWorld(); schedule(); });
-      lab.appendChild(inp); sf.appendChild(lab);
-    });
+    renderSpeedFields();
     fillInputs();
     $('sNow').addEventListener('input', schedule);
   }
@@ -1371,7 +1400,7 @@ Desktop-Version
           <button type="button" class="ghost" data-a="up" aria-label="nach oben" ${i===0?'disabled':''}>▲</button>
           <button type="button" class="ghost" data-a="down" aria-label="nach unten" ${i===state.presets.length-1?'disabled':''}>▼</button>
           <button type="button" class="ghost" data-a="del" aria-label="Paket löschen">✕</button></div>
-        <div class="units">${UNIT_KEYS.map(k=>`<label for="pu${i}_${k}">${L[k]}<input type="number" min="0" step="10" id="pu${i}_${k}" data-u="${k}" value="${p.units[k]||0}"></label>`).join('')}</div>`;
+        <div class="units">${cols().filter(k=>k!=='knight' && k!=='snob').map(k=>`<label for="pu${i}_${k}">${L[k]}<input type="number" min="0" step="10" id="pu${i}_${k}" data-u="${k}" value="${p.units[k]||0}"></label>`).join('')}</div>`;
       el.querySelector(`#pa${i}`).addEventListener('change', e=>{ p.active = e.target.checked; el.classList.toggle('off', !p.active); save(); schedule(); });
       el.querySelector(`#pn${i}`).addEventListener('input', e=>{ p.name = e.target.value || 'Paket'; save(); schedule(); });
       el.querySelectorAll('[data-u]').forEach(inp=> inp.addEventListener('input', ()=>{ p.units[inp.dataset.u] = parseInt(inp.value,10)||0; save(); schedule(); }));
@@ -1529,23 +1558,74 @@ Desktop-Version
     $('psIds').textContent = 'Dorf-IDs: ' + (n ? n.toLocaleString('de-CH') + ' (' + idSource + ')' : 'fehlen');
     $('idInfo').textContent = txt;
   }
+  function currentWorld(){ return worlds && worlds.find(w=>w.id===state.settings.world); }
   function loadIds(){
     idText = ''; idSource = '';
     try{ const c = JSON.parse(localStorage.getItem(idKey())||'null'); if(c && c.text){ idText = c.text; idSource = c.source + ', ' + new Date(c.at).toLocaleDateString('de-CH'); } }catch(e){}
     showIdInfo();
-    // Auf dem eigenen Server liegen village.txt und unit_info.xml neben der Seite
     if(!window.fetch) return;
+    const w = currentWorld();
+    if(w){
+      fetch(`worlds/${w.id}/village.txt`, {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject())
+        .then(t=>{ if(setIds(t, `Weltdaten vom ${fmtDate(w.updated)}`)) schedule(); })
+        .catch(()=>{ $('idInfo').textContent = `Dorfliste von ${w.id} nicht abrufbar. village.txt bitte hochladen.`; });
+      return;
+    }
+    // Alte Einrichtung: village.txt und unit_info.xml direkt neben der Seite
     fetch('village.txt', {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject()).then(t=>{ if(setIds(t, 'Server, aktuell')) schedule(); }).catch(()=>{});
     fetch('unit_info.xml', {cache:'no-store'}).then(r=> r.ok ? r.text() : Promise.reject()).then(x=>{
       const sp = E.parseUnitInfo(x); if(!sp) return;
       Object.assign(state.settings, {speeds: sp, unitSpeed:1, worldSpeed:1, speedSource:'unit_info.xml vom Server'});
-      UNIT_KEYS.forEach(k=>{ const el = $('spd_'+k); if(el) el.value = sp[k]; });
+      cols().forEach(k=>{ const el = $('spd_'+k); if(el) el.value = sp[k]; });
       $('sUnit').value = 1; $('sSpeed').value = 1; updateWorld(); schedule();
     }).catch(()=>{});
   }
+  const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '?' : d.toLocaleString('de-CH', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); };
+  const nf = n => String(n).replace('.', ',');
+  function applyWorld(id, opts){
+    const w = worlds && worlds.find(x=>x.id===id); if(!w) return;
+    const changed = state.settings.world !== w.id || !state.settings.worldChosen;
+    Object.assign(state.settings, { world:w.id, units:w.units.filter(k=>k!=='militia'), speeds:Object.assign({}, E.BASE_SPEED, w.speeds),
+      unitSpeed:1, worldSpeed:1, defValues:w.def, millis:!!w.millis, speedSource:`Weltdaten ${w.id} vom ${fmtDate(w.updated)}`, worldChosen:true });
+    if(changed) state.settings.landOffsetSec = w.millis ? 1 : 0; // mit Millisekunden lieber 1 s hinter den Inc
+    save();
+    renderSpeedFields(); fillInputs(); renderPresets(); updateWorld(); loadIds();
+    $('worldSel').value = w.id; $('welcome').hidden = true;
+    try{ const u = new URL(location.href); u.searchParams.set('w', w.id); history.replaceState(null, '', u); }catch(e){}
+    if(!(opts && opts.quiet)) schedule();
+  }
+  function fillWorldSelect(sel){
+    const groups = {};
+    worlds.forEach(w=>{ const g = w.id.replace(/\d.*$/, ''); (groups[g] = groups[g] || []).push(w); });
+    const NAMES = {de:'Welten', dec:'Classic', dep:'Casual', des:'Speed'};
+    sel.innerHTML = Object.entries(groups).map(([g, list])=>`<optgroup label="${NAMES[g] || g}">${list.map(w=>
+      `<option value="${w.id}">${w.id} · ${nf(w.speed)} × ${nf(w.unitSpeed)}${w.archer?' · Bogen':''}${w.knight?' · Pala':''}</option>`).join('')}</optgroup>`).join('');
+  }
+  function loadWorldList(){
+    if(!window.fetch) return Promise.resolve();
+    return fetch('worlds/index.json', {cache:'no-store'}).then(r=> r.ok ? r.json() : Promise.reject()).then(d=>{
+      if(!d || !Array.isArray(d.worlds) || !d.worlds.length) return;
+      worlds = d.worlds;
+      fillWorldSelect($('worldSel')); fillWorldSelect($('worldFirst'));
+      $('worldPick').hidden = false;
+      const param = new URLSearchParams(location.search).get('w');
+      const pick = [param, state.settings.worldChosen ? state.settings.world : null].find(id=> id && worlds.some(w=>w.id===id));
+      if(pick) applyWorld(pick, {quiet:true});
+      else { $('welcome').hidden = false; const def = worlds.find(w=>w.id===state.settings.world); if(def) $('worldFirst').value = def.id; }
+      updateWorld(); schedule();
+    }).catch(()=>{});
+  }
+  $('worldSel').addEventListener('change', e=> applyWorld(e.target.value));
+  $('btnWorldFirst').addEventListener('click', ()=> applyWorld($('worldFirst').value));
   function updateWorld(){
     const w = state.settings.world;
     $('worldTag').textContent = 'v2 · ' + w;
+    const cw = currentWorld();
+    $('worldInfo').textContent = cw ? `${cw.id} · Geschwindigkeit ${nf(cw.speed)} × ${nf(cw.unitSpeed)} · ${cw.millis ? 'mit' : 'ohne'} Millisekunden · ${cw.archer ? 'mit Bogen · ' : ''}${cw.knight ? 'mit Paladin · ' : ''}${Number(cw.villages).toLocaleString('de-CH')} Dörfer · Stand ${fmtDate(cw.updated)}` : '';
+    $('manualHint').hidden = !cw;
+    $('landHint').textContent = state.settings.millis
+      ? 'Welt mit Millisekunden: Die Millisekunde des Tabs ist nicht steuerbar. Deshalb landet er standardmässig 1 s nach dem früheren Inc.'
+      : 'Welt ohne Millisekunden: Der Tab landet auf der Sekunde des früheren Incs. Befehle derselben Sekunde werden in Abschickreihenfolge verrechnet, der später abgeschickte Tab kommt also nach diesem Inc an.';
     $('vtUrl').textContent = `https://${w}.die-staemme.de/map/village.txt`;
     $('speedInfo').textContent = state.settings.speedSource ? `Laufzeiten: ${state.settings.speedSource}.` : 'Laufzeiten noch nicht bestätigt: Werte der Welt eintragen (Spielgeschw. × Einheitengeschw. wirken zusammen).';
   }
@@ -1566,7 +1646,7 @@ Desktop-Version
     $('shareInfo').textContent = 'Übernommen.';
   });
 
-  load(); bindSettings(); renderWindows(); renderPresets(); showExport('ds'); updateWorld(); loadIds();
+  load(); bindSettings(); renderWindows(); renderPresets(); showExport('ds'); updateWorld(); loadIds(); loadWorldList();
   // Startzustand: Testdaten anzeigen, damit sichtbar ist, was das Tool macht
   $('btnDemo').click();
 })();

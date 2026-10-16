@@ -1,20 +1,26 @@
-# Tabben-Planer (GitHub Pages)
+# DS TabBuddy
 
-Die Seite läuft unter `https://DEINNAME.github.io/tabben-planer/`. Eine GitHub Action holt alle 3 Stunden Dorfliste und Einheitenwerte von de258, die Seite lädt sie beim Öffnen automatisch.
+Tabben-Planer für Die Stämme: legt kleine Deff-Pakete exakt in die Lücken zwischen eingehende Angriffe.
 
-## Einrichten (einmalig, ca. 5 Minuten)
+**Seite:** https://schwalbengott.github.io/ds-tabbuddy/
+**Direktlink für eine Welt:** https://schwalbengott.github.io/ds-tabbuddy/?w=de258
 
-1. Auf github.com ein **neues öffentliches Repository** anlegen, Name z. B. `tabben-planer`.
-2. **Dateien hochladen**: „Add file“ → „Upload files“ und den *Inhalt* dieses Ordners hineinziehen (inklusive des Ordners `.github`). Commit.
-   Tipp: Der Ordner `.github` ist auf manchen Rechnern versteckt. Notfalls die Datei über „Add file“ → „Create new file“ anlegen, als Name `.github/workflows/update-world.yml` eintippen und den Inhalt einfügen.
-3. **Pages einschalten**: Settings → Pages → Source „Deploy from a branch“ → Branch `main`, Ordner `/ (root)` → Save.
-4. **Action einmal starten**: Tab „Actions“ → „Weltdaten aktualisieren“ → „Run workflow“. Danach liegen `village.txt` und `unit_info.xml` im Repo.
-5. Nach 1–2 Minuten ist die Seite online. Link an die Dualis schicken.
+## Wie es funktioniert
+- `index.html` ist das ganze Tool. Es rechnet komplett im Browser; eingefügte Spieldaten verlassen den Browser nicht.
+- Die Action `Weltdaten aktualisieren` läuft alle 6 Stunden und schreibt nach `worlds/`:
+  - `index.json`: alle Welten von die-staemme.de mit Geschwindigkeit, Einheiten, Laufzeiten, Deffwerten, Millisekunden ja/nein
+  - `<welt>/village.txt`: Dorf-IDs (gekürzt auf `id,,x,y`)
+- Beim Öffnen wählt man die Welt, alles Weitere stellt sich danach ein.
 
-Klappt Schritt 4 mit einer Rechte-Fehlermeldung: Settings → Actions → General → Workflow permissions → „Read and write permissions“.
+## Dateien
+| Datei | Zweck |
+|---|---|
+| `index.html` | das Tool |
+| `tools/update_worlds.py` | holt Weltliste und Weltdaten |
+| `.github/workflows/update-worlds.yml` | startet das Skript zeitgesteuert |
+| `worlds/` | wird von der Action erzeugt, nicht von Hand bearbeiten |
 
-## Gut zu wissen
-- Das Repo und die Seite sind öffentlich. Wer den Link kennt, kann das Tool nutzen; deine Spieldaten fügst du nur im eigenen Browser ein, sie landen nicht auf GitHub. Die eingebauten Testdaten vom 02.08. (de254) enthalten aber Spielernamen aus einer alten SOS.
-- Welt wechseln: in `update-world.yml` die Zeile `WORLD: de258` ändern.
-- Tool aktualisieren: neue `index.html` hochladen und alte ersetzen.
-- GitHub pausiert geplante Actions nach 60 Tagen ohne Repo-Aktivität. Dann im Actions-Tab wieder aktivieren.
+## Wartung
+- Tool aktualisieren: neue `index.html` hochladen.
+- Weltdaten sofort holen: Actions → „Weltdaten aktualisieren“ → „Run workflow“.
+- GitHub pausiert geplante Actions nach 60 Tagen ohne Aktivität im Repo; dann im Actions-Tab wieder aktivieren.
