@@ -81,6 +81,18 @@ label{font-size:.85rem; color:var(--muted); display:flex; flex-direction:column;
 .field-head label{font-size:.92rem; color:var(--fg); font-weight:700}
 .where{font-size:.78rem; color:var(--muted)}
 .hint{font-size:.8rem; color:var(--muted)}
+.help{font-size:.76rem; color:var(--muted); line-height:1.35; font-weight:400}
+label .help{display:block; margin-top:1px}
+.wt{display:flex; flex-direction:column; gap:1px}
+.label-strong{font-size:.88rem; color:var(--fg)}
+.fields.wide{grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:12px 10px; align-items:start}
+.win{display:grid; grid-template-columns:24px minmax(0,auto) minmax(0,1fr); gap:6px 8px; align-items:center; padding:6px 8px; border:1px solid var(--line); border-radius:4px}
+.win .k{font-size:.8rem; color:var(--muted)}
+.win .acts{display:flex; justify-content:flex-end; gap:2px}
+.win input[type=datetime-local]{width:auto; font-family:var(--f-mono); font-size:.82rem}
+.win .len{font-size:.78rem; font-family:var(--f-mono); color:var(--muted)}
+.win .len.bad{color:var(--bad)}
+.win.past{opacity:.5}
 textarea, input, select{font:inherit; color:var(--fg); background:var(--sunk); border:1px solid var(--line); border-radius:4px; padding:6px 8px; min-width:0}
 textarea{font-family:var(--f-mono); font-size:.72rem; min-height:76px; resize:vertical; width:100%}
 textarea.big{min-height:96px}
@@ -130,8 +142,6 @@ button:disabled{opacity:.4; cursor:default}
 .weight{display:grid; grid-template-columns:minmax(0,1fr) 120px 34px; gap:8px; align-items:center; font-size:.88rem}
 .weight output{font-family:var(--f-mono); font-size:.8rem; text-align:right}
 .weight input{accent-color:var(--accent)}
-.win{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
-.win input{width:auto}
 
 /* Ergebnis */
 .kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(118px,1fr)); gap:8px}
@@ -323,7 +333,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
         <button id="btnResetPresets" type="button" class="ghost">Standard</button>
       </div>
       <div class="fields">
-        <label for="sReserve">Reserve je Dorf in %<input id="sReserve" type="number" min="0" max="95" step="5" data-k="reservePct"></label>
+        <label for="sReserve">Reserve je Dorf in %<input id="sReserve" type="number" min="0" max="95" step="5" data-k="reservePct"><small class="help">Dieser Anteil deiner Truppen wird nie verplant, z. B. für spätere Incs.</small></label>
       </div>
       <label class="check" for="sExcl"><input id="sExcl" type="checkbox" data-k="excludeAttacked"> Angegriffene Dörfer nicht als Quelle</label>
     </section>
@@ -332,26 +342,36 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     <div class="a-set stack">
       <section class="panel" id="pnlTimes">
         <div class="panel-head"><h2>Abschickzeiten</h2><span class="hint">Wann bist du online?</span></div>
+        <p class="help">Tabs werden nur in diesen Zeiträumen abgeschickt. Mit Datum, damit du auch Tage im Voraus planen kannst.</p>
         <div id="winList" class="inner"></div>
         <div class="row">
           <button id="btnAddWin" type="button">Zeitfenster hinzufügen</button>
           <label for="sBuf" class="check">Puffer <input id="sBuf" type="number" min="0" style="width:64px" data-k="windowBufferMin"> Min.</label>
         </div>
+        <p class="help">Puffer: Abstand zu Beginn und Ende jedes Fensters, damit du nicht in letzter Minute klicken musst.</p>
       </section>
 
       <details class="panel" id="detPrio">
         <summary><h2>Priorisierung</h2><span class="sum-note">welche Lücken zuerst</span></summary>
         <div class="inner">
-          <p class="hint">Jede Lücke bekommt einen Wert. Der Plan holt die grösste Summe über alle Pakete heraus.</p>
-          <div class="weight"><span>Viele Incs aufs Dorf</span><input id="wCount" type="range" min="0" max="3" step="0.25" data-k="wCount"><output for="wCount"></output></div>
-          <div class="weight"><span>Kurze Lücke</span><input id="wShort" type="range" min="0" max="3" step="0.25" data-k="wShort"><output for="wShort"></output></div>
-          <div class="weight"><span>Mitte der Welle (Splits)</span><input id="wCenter" type="range" min="0" max="3" step="0.25" data-k="wCenter"><output for="wCenter"></output></div>
-          <div class="weight"><span>Schwache Deff im Dorf</span><input id="wWeak" type="range" min="0" max="3" step="0.25" data-k="wWeak"><output for="wWeak"></output></div>
-          <div class="weight"><span>Jedes Dorf mind. 1 Tab</span><input id="wSpread" type="range" min="0" max="5" step="0.5" data-k="wSpread"><output for="wSpread"></output></div>
-          <label class="check" for="sBunker"><input id="sBunker" type="checkbox" data-k="skipBunker"> Bunker nicht tabben</label>
-          <label for="sBunkerMin">Bunker ab so viel Fremddeff (Speer + Schwert + Bogen + SKav)
-            <input id="sBunkerMin" type="number" min="0" step="500" data-k="bunkerMin"></label>
-          <p class="hint">Faktor nach Befehlsname des nächsten Incs:</p>
+          <p class="help">Greift nur, wenn deine Pakete nicht für alle Lücken reichen. Dann bestimmt sie, welche Lücken zuerst getabbt werden. 0 = egal, 3 = sehr wichtig.</p>
+          <div class="wt"><div class="weight"><span>Viele Incs aufs Dorf</span><input id="wCount" type="range" min="0" max="3" step="0.25" data-k="wCount"><output for="wCount"></output></div>
+            <p class="help">Dörfer unter Dauerbeschuss zuerst, dort ist am ehesten etwas Echtes dabei.</p></div>
+          <div class="wt"><div class="weight"><span>Kurze Lücke</span><input id="wShort" type="range" min="0" max="3" step="0.25" data-k="wShort"><output for="wShort"></output></div>
+            <p class="help">Enge Abstände zwischen zwei Incs zuerst, dort verstecken sich Splits.</p></div>
+          <div class="wt"><div class="weight"><span>Mitte der Welle</span><input id="wCenter" type="range" min="0" max="3" step="0.25" data-k="wCenter"><output for="wCenter"></output></div>
+            <p class="help">Lücken in der Mitte einer Welle zuerst. Vorne laufen oft Clears, hinten Fakes.</p></div>
+          <div class="wt"><div class="weight"><span>Schwache Deff im Dorf</span><input id="wWeak" type="range" min="0" max="3" step="0.25" data-k="wWeak"><output for="wWeak"></output></div>
+            <p class="help">Dörfer mit wenig Deff laut SOS zuerst, dort richtet ein Split am meisten an.</p></div>
+          <div class="wt"><div class="weight"><span>Jedes Dorf mind. 1 Tab</span><input id="wSpread" type="range" min="0" max="5" step="0.5" data-k="wSpread"><output for="wSpread"></output></div>
+            <p class="help">Bonus für den ersten Tab pro Dorf: lieber breit streuen als ein Dorf mehrfach tabben.</p></div>
+          <div class="wt"><label class="check" for="sBunker"><input id="sBunker" type="checkbox" data-k="skipBunker"> Bunker nicht tabben</label>
+            <p class="help">Dörfer mit viel Fremddeff halten auch ohne Tab und werden übersprungen.</p></div>
+          <label for="sBunkerMin">Bunker ab so viel Fremddeff
+            <input id="sBunkerMin" type="number" min="0" step="500" data-k="bunkerMin">
+            <small class="help">Speer + Schwert + Bogen + SKav im Dorf (laut SOS) minus deine eigenen.</small></label>
+          <div class="wt"><span class="label-strong">Faktor nach Befehlsname</span>
+            <p class="help">Wenn du Incs im Spiel umbenennst (z. B. „Kata“, „AG“). Höher = die Lücke davor zählt mehr.</p></div>
           <div class="fields">
             <label for="uwAg">AG<input id="uwAg" type="number" step="0.1" min="0" data-uw="ag"></label>
             <label for="uwKata">Kata<input id="uwKata" type="number" step="0.1" min="0" data-uw="kata"></label>
@@ -359,25 +379,27 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
             <label for="uwSpy">Späher<input id="uwSpy" type="number" step="0.1" min="0" data-uw="spaeher"></label>
             <label for="uwOther">Sonstige<input id="uwOther" type="number" step="0.1" min="0" data-uw="other"></label>
           </div>
-          <label for="sThreats">Bekannte Offs/Splitter aus Berichten: Spieler oder Herkunftsdorf, optional =Faktor (Standard 2)
-            <textarea id="sThreats" spellcheck="false" style="min-height:60px" data-k="threats" placeholder="DobbyFreeElf=2&#10;565|546=3"></textarea></label>
+          <label for="sThreats">Bekannte Offs und Splitter
+            <textarea id="sThreats" spellcheck="false" style="min-height:60px" data-k="threats" placeholder="DobbyFreeElf=2&#10;565|546=3"></textarea>
+            <small class="help">Spieler oder Herkunftsdorf aus deinen Berichten, eins pro Zeile. Ihre Incs zählen doppelt, mit =3 dreifach.</small></label>
         </div>
       </details>
 
       <details class="panel" id="detLimits">
         <summary><h2>Limits &amp; Timing</h2><span class="sum-note">Wellen, Landung, Obergrenzen</span></summary>
         <div class="inner">
-          <div class="fields">
-            <label for="sMaxV">Max. Tabs je Dorf (0 = ∞)<input id="sMaxV" type="number" min="0" data-k="maxPerVillage"></label>
-            <label for="sMaxT">Max. Tabs gesamt (0 = ∞)<input id="sMaxT" type="number" min="0" data-k="maxTotal"></label>
-            <label for="sMaxH">Max. Laufzeit in h (0 = ∞)<input id="sMaxH" type="number" min="0" step="0.5" data-k="maxTravelH"></label>
-            <label for="sLead">Vorlauf in Min.<input id="sLead" type="number" min="0" data-k="leadMin"></label>
-            <label for="sWave">Neue Welle ab Pause (Min.)<input id="sWave" type="number" min="1" data-k="waveBreakMin"></label>
-            <label for="sMinGap">Min. Lücke (s)<input id="sMinGap" type="number" min="0" data-k="minGapSec"></label>
-            <label for="sLand">Landung + s nach Inc<input id="sLand" type="number" min="0" data-k="landOffsetSec"></label>
+          <p class="help">Feste Regeln, die jeder Tab einhalten muss. Die Standardwerte passen meistens.</p>
+          <div class="fields wide">
+            <label for="sMaxV">Max. Tabs je Dorf (0 = ∞)<input id="sMaxV" type="number" min="0" data-k="maxPerVillage"><small class="help">Mehr Tabs pro Dorf werden nicht geplant.</small></label>
+            <label for="sMaxT">Max. Tabs gesamt (0 = ∞)<input id="sMaxT" type="number" min="0" data-k="maxTotal"><small class="help">Obergrenze für den ganzen Plan, z. B. wenn du nur 20 Befehle schicken willst.</small></label>
+            <label for="sMaxH">Max. Laufzeit in h (0 = ∞)<input id="sMaxH" type="number" min="0" step="0.5" data-k="maxTravelH"><small class="help">Längere Laufzeiten binden Truppen lange. Solche Tabs weglassen.</small></label>
+            <label for="sLead">Vorlauf in Min.<input id="sLead" type="number" min="0" data-k="leadMin"><small class="help">Mindestzeit zwischen jetzt und dem ersten Abschicken.</small></label>
+            <label for="sWave">Neue Welle ab Pause (Min.)<input id="sWave" type="number" min="1" data-k="waveBreakMin"><small class="help">Grössere Pausen zwischen Incs trennen Wellen und werden nicht getabbt.</small></label>
+            <label for="sMinGap">Min. Lücke (s)<input id="sMinGap" type="number" min="0" data-k="minGapSec"><small class="help">Kürzere Lücken werden ignoriert. Bei 1 s fallen nur Incs derselben Sekunde weg.</small></label>
+            <label for="sLand">Landung + s nach Inc<input id="sLand" type="number" min="0" data-k="landOffsetSec"><small class="help">0 = Tab landet auf der Sekunde des früheren Incs.</small></label>
+            <label for="sNow">Referenzzeit<input id="sNow" type="datetime-local" step="1"><small class="help">Leer lassen. Nur zum Nachrechnen älterer Daten.</small></label>
           </div>
-          <p class="hint" id="landHint"></p>
-          <label for="sNow">Referenzzeit (leer = jetzt)<input id="sNow" type="datetime-local" step="1"></label>
+          <p class="help" id="landHint"></p>
         </div>
       </details>
 
@@ -452,7 +474,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     excludeAttacked: false,
     skipBunker: true,      // Dörfer mit viel Fremddeff nicht tabben
     bunkerMin: 3000,       // ab so vielen fremden Deff-Einheiten (Speer+Schwert+SKav) gilt ein Dorf als Bunker
-    windows: [],           // [{start:'20:45', end:'01:00'}]
+    windows: [],           // [{from: ms, to: ms}] (ältere Form {start:'20:45', end:'01:00'} = täglich)
     windowBufferMin: 0
   };
 
@@ -628,6 +650,10 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     if (!windows || !windows.length) return true;
     const d = new Date(ms), mins = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
     return windows.some(w => {
+      if (w.from != null) { // Fenster mit Datum (ms)
+        const s = +w.from + buf * 60000, e = +w.to - buf * 60000;
+        return s <= e && ms >= s && ms <= e;
+      }
       const a = toMin(w.start), b = toMin(w.end);
       if (a <= b) { const s = a + buf, e = b - buf; return s <= e && mins >= s && mins <= e; }
       return mins >= a + buf || mins <= b - buf; // über Mitternacht
@@ -1014,20 +1040,48 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   }
 
   // ---------- Zeitfenster ----------
+  const DAY = 864e5, p2 = n=>String(n).padStart(2,'0');
+  const toLocal = ms => { const d = new Date(ms); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  const fmtLen = ms => { const h = ms/36e5; return String(h >= 10 ? Math.round(h) : Math.round(h*10)/10).replace('.', ',') + ' h'; };
+  const wday = ms => new Date(ms).toLocaleDateString('de-CH', {weekday:'short'});
+  // Ältere tägliche Fenster (hh:mm) in ein datiertes Fenster ab heute umwandeln
+  function migrateWindows(){
+    state.settings.windows = (state.settings.windows || []).map(w=>{
+      if(w.from != null) return w;
+      const t = new Date(), [sh,sm] = (w.start||'20:00').split(':').map(Number), [eh,em] = (w.end||'01:00').split(':').map(Number);
+      const a = new Date(t.getFullYear(), t.getMonth(), t.getDate(), sh, sm).getTime();
+      let b = new Date(t.getFullYear(), t.getMonth(), t.getDate(), eh, em).getTime(); if(b <= a) b += DAY;
+      return {from:a, to:b};
+    });
+  }
+  function lenText(w){ return w.to <= w.from ? 'Ende liegt vor Start' : `${wday(w.from)} · ${fmtLen(w.to - w.from)}${w.to < Date.now() ? ' · vorbei' : ''}`; }
   function renderWindows(){
     const box = $('winList'); box.innerHTML = '';
-    state.settings.windows.forEach((w,i)=>{
-      const row = document.createElement('div'); row.className='win';
-      row.innerHTML = `<input type="time" id="winS${i}" value="${w.start}" aria-label="Zeitfenster ${i+1} von"> bis <input type="time" id="winE${i}" value="${w.end}" aria-label="Zeitfenster ${i+1} bis"> <button type="button" class="ghost" aria-label="Zeitfenster entfernen">Entfernen</button>`;
-      const [a,b] = row.querySelectorAll('input');
-      a.addEventListener('input', ()=>{ w.start = a.value; save(); schedule(); });
-      b.addEventListener('input', ()=>{ w.end = b.value; save(); schedule(); });
-      row.querySelector('button').addEventListener('click', ()=>{ state.settings.windows.splice(i,1); save(); renderWindows(); schedule(); });
+    const W = state.settings.windows;
+    W.forEach((w,i)=>{
+      const row = document.createElement('div'); row.className = 'win' + (w.to < Date.now() ? ' past' : '');
+      row.innerHTML = `<span class="k">von</span><input type="datetime-local" id="winS${i}" value="${toLocal(w.from)}" aria-label="Zeitfenster ${i+1} von">
+        <span class="len ${w.to <= w.from ? 'bad' : ''}">${lenText(w)}</span>
+        <span class="k">bis</span><input type="datetime-local" id="winE${i}" value="${toLocal(w.to)}" aria-label="Zeitfenster ${i+1} bis">
+        <span class="acts"><button type="button" class="ghost" data-a="copy" title="Gleiches Fenster am Folgetag anlegen">+1 Tag</button><button type="button" class="ghost" data-a="del" aria-label="Zeitfenster entfernen">✕</button></span>`;
+      const [a,b] = row.querySelectorAll('input'), len = row.querySelector('.len');
+      const upd = ()=>{ const f = new Date(a.value).getTime(), t = new Date(b.value).getTime();
+        if(!isNaN(f)) w.from = f; if(!isNaN(t)) w.to = t;
+        len.textContent = lenText(w); len.classList.toggle('bad', w.to <= w.from); row.classList.toggle('past', w.to < Date.now());
+        save(); schedule(); };
+      a.addEventListener('input', upd); b.addEventListener('input', upd);
+      row.querySelector('[data-a="copy"]').addEventListener('click', ()=>{ W.splice(i+1, 0, {from:w.from+DAY, to:w.to+DAY}); save(); renderWindows(); schedule(); });
+      row.querySelector('[data-a="del"]').addEventListener('click', ()=>{ W.splice(i,1); save(); renderWindows(); schedule(); });
       box.appendChild(row);
     });
-    if(!state.settings.windows.length){ const p = document.createElement('p'); p.className='hint'; p.textContent='Kein Zeitfenster: Abschicken rund um die Uhr. Über Mitternacht geht in einer Zeile, z. B. 20:45 bis 01:00.'; box.appendChild(p); }
+    if(!W.length){ const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Kein Zeitfenster: Tabs werden rund um die Uhr geplant. Füge die Zeiträume hinzu, in denen du online bist, z. B. Samstag 20:00 bis Sonntag 01:00.'; box.appendChild(p); }
   }
-  $('btnAddWin').addEventListener('click', ()=>{ state.settings.windows.push({start:'20:00', end:'01:00'}); save(); renderWindows(); schedule(); });
+  $('btnAddWin').addEventListener('click', ()=>{
+    const W = state.settings.windows, last = W[W.length-1];
+    if(last) W.push({from:last.from+DAY, to:last.to+DAY});
+    else { const t = new Date(), a = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 20, 0).getTime(); W.push({from:a, to:a + 5*36e5}); }
+    save(); renderWindows(); schedule();
+  });
 
   // ---------- Pakete ----------
   function renderPresets(){
@@ -1136,7 +1190,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     if(!d || !d.settings || !Array.isArray(d.presets)){ $('shareInfo').textContent = 'Text nicht erkannt. Erwartet wird der Text aus „Meine Einstellungen kopieren“.'; return; }
     const keepWorld = { world: state.settings.world, worldChosen: state.settings.worldChosen };
     state.settings = Object.assign(JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), d.settings, keepWorld);
-    state.presets = d.presets; save();
+    state.presets = d.presets; migrateWindows(); save();
     if(currentWorld()) applyWorld(state.settings.world, {quiet:true});
     fillInputs(); renderWindows(); renderPresets(); updateWorld(); schedule();
     $('shareInfo').textContent = 'Übernommen.'; $('inShare').value = '';
@@ -1295,7 +1349,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   $('cpTxt').addEventListener('click', ()=> copy($('txtOut').value, 'Kopiert.'));
 
   // ---------- Start ----------
-  load(); bindSettings(); renderSpeedFields(); fillInputs(); renderWindows(); renderPresets(); updateWorld(); loadIds(); render(); loadWorldList();
+  load(); migrateWindows(); bindSettings(); renderSpeedFields(); fillInputs(); renderWindows(); renderPresets(); updateWorld(); loadIds(); render(); loadWorldList();
 })();
 </script>
 </body>
