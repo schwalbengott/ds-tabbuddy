@@ -229,7 +229,8 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   <main class="grid">
     <!-- Daten -->
     <section class="panel a-data" id="pnlData">
-      <h2>Daten aus dem Spiel</h2>
+      <div class="panel-head"><h2>Daten aus dem Spiel</h2><button type="button" class="ghost" id="btnClear">Neue Aktion</button></div>
+      <p class="help" id="saveInfo">Wird nur in deinem Browser gespeichert, getrennt pro Welt.</p>
       <div class="field">
         <div class="field-head"><label for="inSos">SOS-Anfrage</label><span class="where">BB-Code mit [b]Dorf:[/b] … Ankunftszeit</span></div>
         <textarea id="inSos" class="big" spellcheck="false" placeholder="[b]Dorf:[/b] [coord]489|532[/coord]&#10;[b]Wallstufe:[/b] 20&#10;[b]Verteidiger:[/b] 964 962 0 …&#10;[command]attack[/command] Ramme … Ankunftszeit: 03.08.26 07:54:23 …"></textarea>
@@ -839,12 +840,15 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     const threats = parseThreats(s.threats);
 
     // Referenzzeit
-    let now = input.now != null ? input.now : Date.now();
+    // dataTime = Zeitpunkt, zu dem die Spieldaten eingefügt wurden. Bleibt gleich, solange die Daten gleich bleiben,
+    // damit ein gespeicherter Plan nach dem Neuladen identisch berechnet wird.
+    const base = input.dataTime || Date.now();
+    let now = input.now != null ? input.now : base;
     let nowSource = input.now != null ? 'manuell' : 'Gerätezeit';
     if (input.now == null && tr.serverTime) {
-      const diff = Math.abs(Date.now() - tr.serverTime);
+      const diff = Math.abs(base - tr.serverTime);
       if (diff > 24 * 3600e3) { now = tr.serverTime; nowSource = 'Serverzeit aus Truppenübersicht (Archivdaten)'; warnings.push('Die Truppenübersicht ist über 24 h alt. Gerechnet wird mit ihrer Serverzeit; für einen aktuellen Plan neue Übersicht einfügen.'); }
-      else { now = Math.max(Date.now(), tr.serverTime); nowSource = 'Gerätezeit'; }
+      else { now = Math.max(base, tr.serverTime); nowSource = 'Gerätezeit'; }
     }
 
     // Bestehender Plan
@@ -930,7 +934,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     if (!targets.length) warnings.push('Keine angegriffenen Dörfer im SOS-Text erkannt.');
     if (!tr.villages.length) warnings.push('Keine Dörfer in der Truppenübersicht erkannt (es wird die Zeile "eigene" gelesen).');
 
-    return { settings: s, now, nowSource, targets, villages: tr.villages, packages: pk, slots, tabs, existing, outgoing, warnings, ids, total: res.total };
+    return { settings: s, now, base, nowSource, targets, villages: tr.villages, packages: pk, slots, tabs, existing, outgoing, warnings, ids, total: res.total };
   }
 
   // ---------- Exporte ----------
@@ -1007,7 +1011,34 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
       if(Array.isArray(d.presets) && d.presets.length) state.presets = d.presets; }
       sent = JSON.parse(localStorage.getItem(SENT)||'{}') || {}; }catch(e){} }
   function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){} }
-  function saveSent(){ try{ localStorage.setItem(SENT, JSON.stringify(sent)); }catch(e){} }
+  function saveSent(){
+    // Häkchen von Tabs, deren Ankunft über 3 Tage zurückliegt, aufräumen
+    const old = Date.now() + (result ? result.clockOffset : 0) - 3*864e5;
+    Object.keys(sent).forEach(k=>{ const t = +k.split('@')[1]; if(t && t < old) delete sent[k]; });
+    try{ localStorage.setItem(SENT, JSON.stringify(sent)); }catch(e){}
+  }
+  // ---------- Eingaben pro Welt ----------
+  const DATA_FIELDS = ['inSos','inTroops','inOut','inPlan','inIds'];
+  const dataKey = w => 'tabbuddy_data_' + w;
+  let dataTime = null, dataSaveT = null, dataWorld = null; // dataWorld = Welt, deren Daten gerade in den Feldern stehen
+  function saveData(world){
+    world = world || dataWorld || state.settings.world;
+    const d = { at: dataTime };
+    DATA_FIELDS.forEach(id=> d[id] = $(id).value);
+    try{
+      if(DATA_FIELDS.some(id=> d[id].trim())) localStorage.setItem(dataKey(world), JSON.stringify(d));
+      else localStorage.removeItem(dataKey(world));
+      $('saveInfo').textContent = 'Wird nur in deinem Browser gespeichert, getrennt pro Welt.';
+    }catch(e){ $('saveInfo').textContent = 'Speichern im Browser nicht möglich (Speicher voll oder gesperrt). Die Daten gehen beim Neuladen verloren.'; }
+  }
+  function restoreData(world){
+    world = world || state.settings.world; dataWorld = world;
+    let d = null; try{ d = JSON.parse(localStorage.getItem(dataKey(world))||'null'); }catch(e){}
+    DATA_FIELDS.forEach(id=> $(id).value = d && d[id] ? d[id] : '');
+    dataTime = d && d.at ? d.at : null;
+    $('detOptional').open = !!(d && (d.inOut || d.inPlan));
+  }
+  function switchData(to){ if(dataWorld !== to){ clearTimeout(dataSaveT); if(dataWorld) saveData(dataWorld); restoreData(to); } }
 
   // ---------- Einstellungen ----------
   function fillInputs(){
@@ -1026,7 +1057,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
         if(['unitSpeed','worldSpeed'].includes(k)) state.settings.speedSource = 'manuell';
         state.settings[k] = el.type==='checkbox' ? el.checked : (el.type==='number'||el.type==='range'||el.tagName==='SELECT') ? (parseFloat(el.value)||0) : el.value;
         if(out) out.textContent = nf(state.settings[k]);
-        if(k==='world'){ state.settings.speedSource = ''; loadIds(); updateWorld(); }
+        if(k==='world'){ switchData(state.settings.world); state.settings.speedSource = ''; loadIds(); updateWorld(); }
         save(); schedule();
       });
     });
@@ -1141,6 +1172,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   function applyWorld(id, opts){
     const w = worlds && worlds.find(x=>x.id===id); if(!w) return;
     const changed = state.settings.world !== w.id || !state.settings.worldChosen;
+    switchData(w.id);
     Object.assign(state.settings, { world:w.id, units:w.units.filter(k=>k!=='militia'), speeds:Object.assign({}, E.BASE_SPEED, w.speeds),
       unitSpeed:1, worldSpeed:1, defValues:w.def, millis:!!w.millis, speedSource:`Weltdaten ${w.id}, Stand ${fmtDate(w.updated)}`, worldChosen:true });
     if(changed) state.settings.landOffsetSec = w.millis ? 1 : 0;
@@ -1204,14 +1236,27 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   // ---------- Eingaben & Rechnen ----------
   const hasData = ()=> $('inSos').value.trim() && $('inTroops').value.trim();
   function schedule(now){ clearTimeout(recalcT); recalcT = setTimeout(run, now===true ? 0 : 300); }
-  ['inSos','inTroops','inPlan','inOut','inIds'].forEach(id=> $(id).addEventListener('input', ()=> schedule()));
+  DATA_FIELDS.forEach(id=> $(id).addEventListener('input', ()=>{
+    dataTime = Date.now();
+    clearTimeout(dataSaveT); dataSaveT = setTimeout(()=> saveData(), 400);
+    schedule();
+  }));
+  // „Neue Aktion“: zweimal klicken, damit nichts versehentlich verloren geht
+  let clearArmed = null;
+  $('btnClear').addEventListener('click', ()=>{
+    const b = $('btnClear');
+    if(!clearArmed){ b.textContent = 'Wirklich alles leeren?'; clearArmed = setTimeout(()=>{ clearArmed = null; b.textContent = 'Neue Aktion'; }, 4000); return; }
+    clearTimeout(clearArmed); clearArmed = null; b.textContent = 'Neue Aktion';
+    DATA_FIELDS.forEach(id=> $(id).value = ''); dataTime = null; saveData(); schedule(true);
+  });
 
   function run(){
     if(!hasData()){ result = null; showParseOnly(); render(); return; }
     const nowVal = $('sNow').value;
     const input = { sos:$('inSos').value, troops:$('inTroops').value, plan:$('inPlan').value, outgoing:$('inOut').value,
-      ids: idText + '\n' + $('inIds').value, presets: state.presets, settings: state.settings, now: nowVal ? new Date(nowVal).getTime() : null };
-    try{ result = E.plan(input); result.startedAt = Date.now(); }
+      ids: idText + '\n' + $('inIds').value, presets: state.presets, settings: state.settings, now: nowVal ? new Date(nowVal).getTime() : null,
+      dataTime: dataTime || Date.now() };
+    try{ result = E.plan(input); result.clockOffset = nowVal ? result.now - Date.now() : result.now - result.base; }
     catch(err){ result = null; $('warnings').innerHTML = `<p class="bad">Berechnung fehlgeschlagen: ${esc(err.message)}</p>`; return; }
     render();
   }
@@ -1319,7 +1364,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
 
   function tick(){
     if(!result) return;
-    const live = result.now + (Date.now() - result.startedAt);
+    const live = Date.now() + result.clockOffset;
     let next = null;
     document.querySelectorAll('#planTable tbody tr[data-send]').forEach(tr=>{
       const d = (+tr.dataset.send - live)/1000, cd = tr.querySelector('.cd');
@@ -1354,7 +1399,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   $('cpTxt').addEventListener('click', ()=> copy($('txtOut').value, 'Kopiert.'));
 
   // ---------- Start ----------
-  load(); migrateWindows(); bindSettings(); renderSpeedFields(); fillInputs(); renderWindows(); renderPresets(); updateWorld(); loadIds(); render(); loadWorldList();
+  load(); migrateWindows(); restoreData(); bindSettings(); renderSpeedFields(); fillInputs(); renderWindows(); renderPresets(); updateWorld(); loadIds(); render(); loadWorldList();
 })();
 </script>
 </body>
