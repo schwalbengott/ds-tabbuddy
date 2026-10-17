@@ -412,8 +412,8 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
             <label for="sUnit">Einheitengeschw.<input id="sUnit" type="number" step="0.01" data-k="unitSpeed"></label>
             <label for="sSpeed">Spielgeschw.<input id="sSpeed" type="number" step="0.01" data-k="worldSpeed"></label>
             <label for="sType">AP-Befehlstyp<select id="sType" data-k="typeCode">
-              <option value="5">Unterstützung</option><option value="6">Stand Unterstützung</option>
-              <option value="7">Schnelle Unterstützung</option><option value="8">Fake Unterstützung</option></select></label>
+              <option value="0">Unterstützung</option><option value="1">Stand Unterstützung</option>
+              <option value="7">Schnelle Unterstützung</option><option value="46">Fake Unterstützung</option></select></label>
           </div>
           <p class="hint">Minuten pro Feld (mit Weltdaten bereits umgerechnet, Faktoren dann 1):</p>
           <div class="fields" id="speedFields"></div>
@@ -459,7 +459,8 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     units: UNITS.slice(),  // Spaltenreihenfolge der Welt
     defValues: null,       // aus Weltdaten, sonst DEF_VALUE
     millis: false,
-    typeCode: 6,
+    typeCode: 1,           // DS-Ultimate-Typ: 0 Unterstützung, 1 Stand Unterstützung, 7 Schnelle Unterstützung, 46 Fake Unterstützung
+    typeVer: 2,
     // Lücken
     waveBreakMin: 30,      // Pause > X Min = neue Welle
     minGapSec: 1,          // kleinere Lücken werden ignoriert
@@ -998,7 +999,10 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   // In Paketen sinnvolle Einheiten: Deff plus Ramme als langsamer Zeitfüller
   const pkUnits = ()=> cols().filter(k=> ['spear','sword','archer','spy','heavy','ram'].includes(k));
 
+  // Bis 17.10.2026 wurden falsche DS-Ultimate-Typen gespeichert (6 = Icon Berittener Bogenschütze statt Stand Unterstützung)
+  function fixType(st){ if(st && st.typeVer == null){ const m = {5:0, 6:1, 7:7, 8:46}; st.typeCode = m[st.typeCode] ?? 1; st.typeVer = 2; } return st; }
   function load(){ try{ const d = JSON.parse(localStorage.getItem(STORE)||'null'); if(d){
+      fixType(d.settings);
       if(d.settings) state.settings = Object.assign(state.settings, d.settings, {unitWeights:Object.assign({}, state.settings.unitWeights, d.settings.unitWeights||{}), speeds:Object.assign({}, state.settings.speeds, d.settings.speeds||{})});
       if(Array.isArray(d.presets) && d.presets.length) state.presets = d.presets; }
       sent = JSON.parse(localStorage.getItem(SENT)||'{}') || {}; }catch(e){} }
@@ -1187,6 +1191,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   $('btnShareOut').addEventListener('click', ()=> copy(JSON.stringify({settings: state.settings, presets: state.presets}), 'Einstellungen kopiert. Dem Duali schicken, der fügt sie hier ein.', $('shareInfo')));
   $('btnShareIn').addEventListener('click', ()=>{
     let d; try{ d = JSON.parse($('inShare').value); }catch(e){}
+    if(d && d.settings) fixType(d.settings);
     if(!d || !d.settings || !Array.isArray(d.presets)){ $('shareInfo').textContent = 'Text nicht erkannt. Erwartet wird der Text aus „Meine Einstellungen kopieren“.'; return; }
     const keepWorld = { world: state.settings.world, worldChosen: state.settings.worldChosen };
     state.settings = Object.assign(JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), d.settings, keepWorld);
