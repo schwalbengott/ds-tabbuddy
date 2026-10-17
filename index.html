@@ -85,6 +85,9 @@ label{font-size:.85rem; color:var(--muted); display:flex; flex-direction:column;
 label .help{display:block; margin-top:1px}
 .wt{display:flex; flex-direction:column; gap:1px}
 .label-strong{font-size:.88rem; color:var(--fg)}
+.resetbox{display:flex; flex-direction:column; gap:6px; padding-top:10px; border-top:1px solid var(--line)}
+button.danger{color:var(--bad); border-color:var(--bad)}
+button.armed{background:var(--bad); color:var(--accent-ink); border-color:var(--bad)}
 .fields.wide{grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:12px 10px; align-items:start}
 .win{display:grid; grid-template-columns:24px minmax(0,auto) minmax(0,1fr); gap:6px 8px; align-items:center; padding:6px 8px; border:1px solid var(--line); border-radius:4px}
 .win .k{font-size:.8rem; color:var(--muted)}
@@ -405,7 +408,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
       </details>
 
       <details class="panel" id="detWorld">
-        <summary><h2>Welt &amp; Export</h2><span class="sum-note">manuell, Dorf-IDs, teilen</span></summary>
+        <summary><h2>Welt &amp; Export</h2><span class="sum-note">manuell, Dorf-IDs, teilen, zurücksetzen</span></summary>
         <div class="inner">
           <p class="hint" id="manualHint">Wird aus der gewählten Welt befüllt. Nur ändern, wenn keine Weltdaten da sind.</p>
           <div class="fields">
@@ -423,6 +426,14 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
           <label for="inIds">Einzelne Dorf-IDs ergänzen (x|y=id)<textarea id="inIds" spellcheck="false" style="min-height:48px" placeholder="489|532=885"></textarea></label>
           <label for="inShare">Einstellungen teilen (Pakete, Zeiten, Priorisierung)<textarea id="inShare" spellcheck="false" style="min-height:48px" placeholder="Text eines Dualis hier einfügen"></textarea></label>
           <div class="row"><button id="btnShareOut" type="button">Meine Einstellungen kopieren</button><button id="btnShareIn" type="button">Eingefügten Text übernehmen</button><span class="small muted" id="shareInfo"></span></div>
+          <div class="resetbox">
+            <span class="label-strong">Zurücksetzen</span>
+            <div class="row">
+              <button id="btnResetSettings" type="button">Einstellungen auf Standard</button>
+              <button id="btnResetAll" type="button" class="danger">Alles löschen</button>
+            </div>
+            <p class="help">„Einstellungen auf Standard“ setzt Pakete, Abschickzeiten, Priorisierung und Limits zurück. Welt und eingefügte Daten bleiben.<br>„Alles löschen“ entfernt alles, was das Tool in diesem Browser gespeichert hat, für alle Welten. Danach startet es wie beim ersten Besuch.</p>
+          </div>
         </div>
       </details>
     </div>
@@ -1241,13 +1252,25 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     clearTimeout(dataSaveT); dataSaveT = setTimeout(()=> saveData(), 400);
     schedule();
   }));
-  // „Neue Aktion“: zweimal klicken, damit nichts versehentlich verloren geht
-  let clearArmed = null;
-  $('btnClear').addEventListener('click', ()=>{
-    const b = $('btnClear');
-    if(!clearArmed){ b.textContent = 'Wirklich alles leeren?'; clearArmed = setTimeout(()=>{ clearArmed = null; b.textContent = 'Neue Aktion'; }, 4000); return; }
-    clearTimeout(clearArmed); clearArmed = null; b.textContent = 'Neue Aktion';
-    DATA_FIELDS.forEach(id=> $(id).value = ''); dataTime = null; saveData(); schedule(true);
+  // Zweistufige Bestätigung: erster Klick fragt nach, zweiter innerhalb von 4 s führt aus
+  function confirmButton(id, question, action){
+    const b = $(id), label = b.textContent; let t = null;
+    b.addEventListener('click', ()=>{
+      if(!t){ b.textContent = question; b.classList.add('armed'); t = setTimeout(()=>{ t = null; b.textContent = label; b.classList.remove('armed'); }, 4000); return; }
+      clearTimeout(t); t = null; b.textContent = label; b.classList.remove('armed'); action();
+    });
+  }
+  confirmButton('btnClear', 'Wirklich alles leeren?', ()=>{ DATA_FIELDS.forEach(id=> $(id).value = ''); dataTime = null; saveData(); schedule(true); });
+  confirmButton('btnResetSettings', 'Wirklich zurücksetzen?', ()=>{
+    const keep = { world: state.settings.world, worldChosen: state.settings.worldChosen };
+    state = { settings: Object.assign(JSON.parse(JSON.stringify(E.DEFAULT_SETTINGS)), keep), presets: JSON.parse(JSON.stringify(E.DEFAULT_PRESETS)) };
+    if(currentWorld()) applyWorld(state.settings.world, {quiet:true}); else save();
+    fillInputs(); renderWindows(); renderPresets(); updateWorld(); schedule(true);
+    $('shareInfo').textContent = 'Einstellungen auf Standard gesetzt.';
+  });
+  confirmButton('btnResetAll', 'Wirklich alles löschen?', ()=>{
+    try{ Object.keys(localStorage).filter(k=> /^(tabbenplaner|tabbuddy)/.test(k)).forEach(k=> localStorage.removeItem(k)); }catch(e){}
+    try{ const u = new URL(location.href); u.searchParams.delete('w'); location.replace(u.toString()); }catch(e){ location.reload(); }
   });
 
   function run(){
