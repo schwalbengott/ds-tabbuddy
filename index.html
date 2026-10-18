@@ -191,7 +191,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
 .strip i.wave{width:2px; background:transparent; border-left:2px dotted var(--line); margin:0 3px}
 .s-tab{background:var(--ok)!important} .s-existing{background:var(--exist)!important} .s-nopkg{background:var(--warn)!important}
 .s-window{background:var(--warn)!important; opacity:.5} .s-unreachable{background:var(--bad)!important; opacity:.75}
-.s-past,.s-invalid{background:var(--idle)!important; opacity:.5} .s-bunker{background:var(--exist)!important; opacity:.3}
+.s-past,.s-invalid{background:var(--idle)!important; opacity:.5} .s-afterag{background:var(--bad)!important; opacity:.3} .s-bunker{background:var(--exist)!important; opacity:.3}
 .exportbox textarea{min-height:200px}
 .empty-row{color:var(--muted); font-size:.9rem; padding:12px}
 @media (max-width:640px){
@@ -280,6 +280,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
       <section class="panel" id="result" hidden>
         <div class="panel-head"><h2>Tabplan</h2><span class="small muted mono" id="stamp"></span></div>
         <div class="kpis" id="kpis"></div>
+        <p class="small muted" id="usage"></p>
         <div class="actions">
           <button class="primary" type="button" id="cpDs">AP-Import kopieren</button>
           <button type="button" id="cpOpen">Offene Lücken fürs Forum</button>
@@ -308,7 +309,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
           <div class="legend">
             <span><i class="s-tab"></i>neu getabbt</span><span><i class="s-existing"></i>unterwegs / im AP</span>
             <span><i class="s-nopkg"></i>Pakete aufgebraucht</span><span><i class="s-window"></i>nur ausserhalb deiner Zeiten</span>
-            <span><i class="s-unreachable"></i>kein Dorf rechtzeitig</span><span><i class="s-past"></i>vorbei</span><span><i class="s-bunker"></i>Bunker</span>
+            <span><i class="s-unreachable"></i>kein Dorf rechtzeitig</span><span><i class="s-past"></i>vorbei</span><span><i class="s-bunker"></i>Bunker</span><span><i class="s-afterag"></i>hinter AG</span>
           </div>
           <div class="cov" id="coverage"></div>
         </div>
@@ -347,7 +348,9 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
       <div class="fields">
         <label for="sReserve">Reserve je Dorf in %<input id="sReserve" type="number" min="0" max="95" step="5" data-k="reservePct"><small class="help">Dieser Anteil deiner Truppen wird nie verplant, z. B. für spätere Incs.</small></label>
       </div>
-      <label class="check" for="sExcl"><input id="sExcl" type="checkbox" data-k="excludeAttacked"> Angegriffene Dörfer nicht als Quelle</label>
+      <div class="wt"><label class="check" for="sExclAg"><input id="sExclAg" type="checkbox" data-k="excludeAgTargets"> Dörfer mit AG-Incs nicht als Quelle</label>
+        <p class="help">Wird das Dorf geadelt, sind seine ausgeschickten Tabs weg.</p></div>
+      <label class="check" for="sExcl"><input id="sExcl" type="checkbox" data-k="excludeAttacked"> Alle angegriffenen Dörfer nicht als Quelle</label>
     </section>
 
     <!-- Einstellungen -->
@@ -377,17 +380,18 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
             <p class="help">Dörfer mit wenig Deff laut SOS zuerst, dort richtet ein Split am meisten an.</p></div>
           <div class="wt"><div class="weight"><span>Jedes Dorf mind. 1 Tab</span><input id="wSpread" type="range" min="0" max="5" step="0.5" data-k="wSpread"><output for="wSpread"></output></div>
             <p class="help">Bonus für den ersten Tab pro Dorf: lieber breit streuen als ein Dorf mehrfach tabben.</p></div>
+          <div class="wt"><label class="check" for="sAfterAg"><input id="sAfterAg" type="checkbox" data-k="skipAfterAg"> Lücken hinter AG auslassen</label>
+            <p class="help">Adelt der AG das Dorf, würde dein Tab beim neuen Besitzer landen.</p></div>
           <div class="wt"><label class="check" for="sBunker"><input id="sBunker" type="checkbox" data-k="skipBunker"> Bunker nicht tabben</label>
             <p class="help">Dörfer mit viel Fremddeff halten auch ohne Tab und werden übersprungen.</p></div>
           <label for="sBunkerMin">Bunker ab so viel Fremddeff
             <input id="sBunkerMin" type="number" min="0" step="500" data-k="bunkerMin">
             <small class="help">Speer + Schwert + Bogen + SKav im Dorf (laut SOS) minus deine eigenen.</small></label>
-          <div class="wt"><span class="label-strong">Faktor nach Befehlsname</span>
-            <p class="help">Wenn du Incs im Spiel umbenennst (z. B. „Kata“, „AG“). Höher = die Lücke davor zählt mehr.</p></div>
+          <div class="wt"><span class="label-strong">Faktor nach Einheit des nächsten Incs</span>
+            <p class="help">Die Einheit erkennt das Tool an der Laufzeit (Abschick- und Ankunftszeit im SOS), sonst am Befehlsnamen. Ramme und Kata laufen gleich schnell und sind nicht unterscheidbar. Höher = die Lücke davor zählt mehr.</p></div>
           <div class="fields">
             <label for="uwAg">AG<input id="uwAg" type="number" step="0.1" min="0" data-uw="ag"></label>
-            <label for="uwKata">Kata<input id="uwKata" type="number" step="0.1" min="0" data-uw="kata"></label>
-            <label for="uwRamme">Ramme<input id="uwRamme" type="number" step="0.1" min="0" data-uw="ramme"></label>
+            <label for="uwRamme">Ramme/Kata<input id="uwRamme" type="number" step="0.1" min="0" data-uw="ramme"></label>
             <label for="uwSpy">Späher<input id="uwSpy" type="number" step="0.1" min="0" data-uw="spaeher"></label>
             <label for="uwOther">Sonstige<input id="uwOther" type="number" step="0.1" min="0" data-uw="other"></label>
           </div>
@@ -507,6 +511,8 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     reservePct: 0, maxPerVillage: 0, maxTotal: 0, maxTravelH: 0, leadMin: 2,
     excludeAttacked: false,
     tempoUnits: ['spear', 'archer', 'sword', 'catapult'], // je 1 davon darf ein Paket langsamer machen
+    skipAfterAg: true,     // Lücken direkt hinter einem AG-Inc auslassen (Dorf ist danach evtl. geadelt)
+    excludeAgTargets: true, // Dörfer mit AG-Incs nicht als Quelle (ausgeschickte Tabs gehen beim Adeln verloren)
     skipBunker: true,      // Dörfer mit viel Fremddeff nicht tabben
     bunkerMin: 3000,       // ab so vielen fremden Deff-Einheiten (Speer+Schwert+SKav) gilt ein Dorf als Bunker
     windows: [],           // [{from: ms, to: ms}] (ältere Form {start:'20:45', end:'01:00'} = täglich)
@@ -546,7 +552,14 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
         const lm = line.match(/\[\/command\]\s*([^|\[]*)/);
         const ac = line.match(/\[coord\](\d+\|\d+)\[\/coord\]/);
         const pm = line.match(/\[player\](.*?)\[\/player\]/);
-        v.attacks.push({ t, label: lm ? lm[1].trim() : '', from: ac ? ac[1] : '', player: pm ? pm[1] : '' });
+        const sm = line.match(/sent\s+(\d{2})\.(\d{2})\.?(\d{2,4})?\s+(\d{2}):(\d{2}):(\d{2})/i);
+        let sent = null;
+        if (sm) {
+          let sy = sm[3] ? (+sm[3] < 100 ? 2000 + +sm[3] : +sm[3]) : yy;
+          sent = new Date(sy, +sm[2] - 1, +sm[1], +sm[4], +sm[5], +sm[6]).getTime();
+          if (!sm[3] && sent > t) sent = new Date(sy - 1, +sm[2] - 1, +sm[1], +sm[4], +sm[5], +sm[6]).getTime(); // Jahreswechsel
+        }
+        v.attacks.push({ t, sent, label: lm ? lm[1].trim() : '', from: ac ? ac[1] : '', player: pm ? pm[1] : '' });
       }
       v.attacks.sort((a, b) => a.t - b.t);
       // dasselbe Dorf kann mehrfach im SOS stehen -> zusammenführen
@@ -767,12 +780,30 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     return slots;
   }
 
-  function unitFactor(label, uw) {
+  // Einheit eines Incs: aus Laufzeit (Abschick- bis Ankunftszeit), sonst aus dem Befehlsnamen
+  function labelUnit(label) {
     const l = (label || '').toLowerCase();
-    if (/\bag\b|adel/.test(l)) return uw.ag;
-    if (/kata/.test(l)) return uw.kata;
-    if (/ramm/.test(l)) return uw.ramme;
-    if (/späh|spah|spaeh|spy/.test(l)) return uw.spaeher;
+    if (/\bag\b|adel|snob/.test(l)) return 'snob';
+    if (/kata|ramm/.test(l)) return 'ram';
+    if (/späh|spah|spaeh|spy/.test(l)) return 'spy';
+    return null;
+  }
+  function detectUnit(a, target, s) {
+    if (a.sent && a.from) {
+      const [fx, fy] = a.from.split('|').map(Number), d = Math.hypot(fx - target.x, fy - target.y);
+      if (d > 0) {
+        const mpf = (a.t - a.sent) / 60000 / d * (s.unitSpeed * s.worldSpeed);
+        let best = null, bd = 1e9;
+        for (const k of ALL) { if (!s.speeds[k]) continue; const dd = Math.abs(s.speeds[k] - mpf) / s.speeds[k]; if (dd < bd) { bd = dd; best = k; } }
+        if (bd <= 0.03) return best === 'catapult' ? 'ram' : best;
+      }
+    }
+    return labelUnit(a.label);
+  }
+  function unitFactor(unit, uw) {
+    if (unit === 'snob') return uw.ag;
+    if (unit === 'ram') return uw.ramme;
+    if (unit === 'spy') return uw.spaeher;
     return uw.other;
   }
 
@@ -783,7 +814,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     const cCenter = sl.waveGaps <= 1 ? 1 : 1 - Math.abs(sl.pos - half) / half;
     const cWeak = sl.defPower == null ? 0.5 : 1 / (1 + sl.defPower / s.weakRef);
     const base = 1 + s.wCount * cCount + s.wShort * cShort + s.wCenter * cCenter + s.wWeak * cWeak;
-    const uf = unitFactor(sl.next.label, s.unitWeights);
+    const uf = unitFactor(sl.next.unit, s.unitWeights);
     let tf = 1;
     for (const th of threats) {
       if ((sl.next.player || '').toLowerCase() === th.key || sl.next.from === th.key) tf = Math.max(tf, th.factor);
@@ -909,8 +940,11 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     }
     const bunkers = new Set(targets.filter(t => t.bunker).map(t => t.coord));
     if (!s.speedSource) warnings.push(`Laufzeiten für ${s.world} nicht bestätigt: Spiel- und Einheitengeschwindigkeit unter „Welt & Export“ prüfen.`);
+    for (const t of targets) { t.attacks.forEach(a => a.unit = detectUnit(a, t, s)); t.agCount = t.attacks.filter(a => a.unit === 'snob').length; }
     const attacked = new Set(targets.map(t => t.coord));
-    const pk = buildPackages(tr.villages, input.presets || DEFAULT_PRESETS, s, { exclude: s.excludeAttacked ? attacked : new Set(), reserved });
+    const exclude = new Set(s.excludeAttacked ? attacked : []);
+    if (s.excludeAgTargets) targets.filter(t => t.agCount > 0).forEach(t => exclude.add(t.coord));
+    const pk = buildPackages(tr.villages, input.presets || DEFAULT_PRESETS, s, { exclude, reserved });
     const slots = computeSlots(targets, s);
 
     // Lücken, die der bestehende Plan schon abdeckt
@@ -923,7 +957,8 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     slots.forEach(sl => scoreSlot(sl, s, threats));
 
     // Kandidatenkanten
-    const open = slots.filter(sl => sl.valid && !sl.existing && sl.arrival > now && !bunkers.has(sl.target));
+    slots.forEach(sl => sl.afterAg = !!(s.skipAfterAg && sl.prev.unit === 'snob'));
+    const open = slots.filter(sl => sl.valid && !sl.existing && sl.arrival > now && !bunkers.has(sl.target) && !sl.afterAg);
     // Tempo-Varianten: Ein Paket darf mit 1 langsameren Einheit laufen (z. B. 1 Kata), wenn das Dorf davon
     // nach der Paketbildung genug übrig hat, um jedes seiner Pakete so zu verschicken.
     const tempoUnits = (s.tempoUnits || []).filter(k => s.speeds[k]);
@@ -983,7 +1018,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
 
     // Status je Lücke
     for (const sl of slots) {
-      sl.status = sl.existing ? 'existing' : sl.tab ? 'tab' : bunkers.has(sl.target) ? 'bunker' : !sl.valid ? 'invalid' : sl.arrival <= now ? 'past' : sl.candidates ? 'nopkg' : sl.windowBlocked ? 'window' : 'unreachable';
+      sl.status = sl.existing ? 'existing' : sl.tab ? 'tab' : bunkers.has(sl.target) ? 'bunker' : sl.afterAg ? 'afterag' : !sl.valid ? 'invalid' : sl.arrival <= now ? 'past' : sl.candidates ? 'nopkg' : sl.windowBlocked ? 'window' : 'unreachable';
     }
     const missingIds = [...new Set(tabs.flatMap(t => [t.src, t.tgt]).filter(c => !ids.byCoord[c]))];
     if (missingIds.length) warnings.push(`Dorf-ID fehlt für ${missingIds.join(', ')} – diese Zeilen fehlen im AP-Export.`);
@@ -1367,7 +1402,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     t('stDone', result && result.tabs.length);
   }
 
-  const STATUS_TXT = {tab:'neu getabbt', existing:'unterwegs / im AP', nopkg:'Pakete aufgebraucht', window:'nur ausserhalb deiner Zeiten', unreachable:'kein Dorf rechtzeitig', past:'vorbei / zu knapp', invalid:'Lücke zu klein', bunker:'Bunker, ausgelassen'};
+  const STATUS_TXT = {tab:'neu getabbt', existing:'unterwegs / im AP', nopkg:'Pakete aufgebraucht', window:'nur ausserhalb deiner Zeiten', unreachable:'kein Dorf rechtzeitig', past:'vorbei / zu knapp', invalid:'Lücke zu klein', bunker:'Bunker, ausgelassen', afterag:'direkt hinter AG, ausgelassen'};
   const sentKey = t => `${t.src}>${t.tgt}@${t.arrival}`;
   const pkHtml = u => `<span class="pk">${E.ALL.filter(k=>u[k]>0).map(k=>`<span>${img(k)}${u[k]}</span>`).join('')}</span>`;
 
@@ -1396,6 +1431,10 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
       ['Dörfer abgedeckt', `${vCov}<small>/${sos.length-nB}</small>`], ['Pakete genutzt', `${r.tabs.length}<small>/${pkTotal}</small>`],
       ['Nächster Tab', `<span id="nextCd">–</span>`]
     ].map(([k,v])=>`<div class="kpi"><span>${k}</span><strong>${v}</strong></div>`).join('');
+    // Verplante Truppen über alle neuen Tabs
+    const use = {}; r.tabs.forEach(t=> Object.entries(t.units).forEach(([k,n])=>{ if(n>0) use[k] = (use[k]||0) + n; }));
+    const useKeys = E.ALL.filter(k=> use[k] > 0);
+    $('usage').innerHTML = useKeys.length ? `Verplant: <span class="pk">${useKeys.map(k=>`<span>${img(k)}${use[k].toLocaleString('de-CH')}</span>`).join('')}</span>` : '';
     const warns = r.warnings;
     $('warnings').innerHTML = warns.map(w=>`<p>${esc(w)}</p>`).join('') +
       (!r.tabs.length && sos.length ? `<p>Kein Tab möglich. Häufige Gründe: Abschickzeiten zu eng, Vorlauf zu gross, oder kein Dorf hat genug Truppen für ein aktives Paket.</p>` : '');
@@ -1430,7 +1469,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
       const cov = sl.filter(s=>s.status==='tab'||s.status==='existing').length;
       const tag = t.bunker ? `<span class="chip exist">Bunker · ${t.foreign.toLocaleString('de-CH')} fremd</span>` : t.defPower==null ? '' : t.defPower < 50000 ? '<span class="chip bad">Deff schwach</span>' : t.defPower < 300000 ? '<span class="chip warn">Deff mittel</span>' : '<span class="chip ok">Deff stark</span>';
       return `<div class="covrow"><span class="c">${t.coord}</span>
-        <span class="meta"><span>${t.attacks.length} Incs · ${t.waves.length} Welle${t.waves.length>1?'n':''}${t.wall!=null?' · Wall '+t.wall:''}</span><span>${cov}/${sl.length} Lücken abgedeckt</span>${tag}</span>
+        <span class="meta"><span>${t.attacks.length} Incs · ${t.waves.length} Welle${t.waves.length>1?'n':''}${t.wall!=null?' · Wall '+t.wall:''}</span><span>${cov}/${sl.length} Lücken abgedeckt</span>${t.agCount ? `<span class="chip bad">${t.agCount} AG</span>` : ''}${tag}</span>
         <div class="strip" aria-label="Lücken von ${t.coord}">${cells || '<span class="hint">keine Lücken</span>'}</div></div>`;
     }).join('');
 
