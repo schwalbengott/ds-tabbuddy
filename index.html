@@ -137,6 +137,8 @@ button:disabled{opacity:.4; cursor:default}
 .ptable input[type=number]{-moz-appearance:textfield; appearance:textfield; padding:4px 4px; width:46px; min-width:44px; text-align:right; font-size:.8rem}
 .ptable input[type=text]{width:100%; min-width:86px; font-weight:700; padding:4px 6px; font-size:.85rem}
 .ptable .tools button{padding:2px 4px}
+.ptable td.tempo{white-space:nowrap; font-family:var(--f-mono); font-size:.78rem; color:var(--muted); padding:0 4px}
+.ptable td.tempo .u{margin-right:2px}
 .ptable input[type=number]::-webkit-inner-spin-button,.ptable input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none; margin:0}
 .ptable tr.off input[type=text], .ptable tr.off input[type=number]{opacity:.45}
 .ptable .tools{white-space:nowrap}
@@ -330,8 +332,14 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
 
     <!-- Pakete -->
     <section class="panel a-pk" id="pnlPk">
-      <div class="panel-head"><h2>Pakete</h2><span class="hint">Reihenfolge = Priorität beim Aufteilen</span></div>
+      <div class="panel-head"><h2>Pakete</h2><span class="row"><button type="button" class="ghost" id="btnPkAll">Alle an</button><button type="button" class="ghost" id="btnPkNone">Alle aus</button></span></div>
+      <p class="help">Haken = wird mitgerechnet. Reihenfolge = Priorität beim Aufteilen der Truppen: Jedes Dorf bildet reihum von oben nach unten Pakete, solange die Truppen reichen.</p>
       <div style="overflow-x:auto"><table class="ptable" id="presetTable"></table></div>
+      <div class="wt">
+        <span class="label-strong">Tempo variieren mit je 1</span>
+        <div class="row" id="tempoUnits"></div>
+        <p class="help">Passt ein Paket zeitlich nicht, packt das Tool 1 langsamere Einheit dazu (z. B. 1 Kata) und erreicht so mehr Lücken. Nur wenn das Dorf davon genug übrig hat.</p>
+      </div>
       <div class="row">
         <button id="btnAddPreset" type="button">Paket hinzufügen</button>
         <button id="btnResetPresets" type="button" class="ghost">Standard</button>
@@ -457,11 +465,24 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   // grobe Deffkraft je Einheit: Mittel aus allgemeiner und Kavallerie-Verteidigung
   const DEF_VALUE = { spear: 30, sword: 32.5, axe: 7.5, archer: 45, spy: 1.5, light: 35, marcher: 35, heavy: 140, ram: 35, catapult: 75, knight: 125, snob: 75 };
 
+  // Grundpakete. Das Tempo variiert der Rechenkern selbst (siehe tempoUnits): 1 langsamere Einheit pro Tab.
   const DEFAULT_PRESETS = [
     { name: 'Dual 200', active: true, units: { spear: 200, sword: 200 } },
     { name: 'Flex 300/100', active: true, units: { spear: 300, heavy: 100 } },
-    { name: 'SKav 100', active: true, units: { heavy: 100 } }
+    { name: 'SKav 100', active: true, units: { heavy: 100 } },
+    { name: 'Speer 400', active: true, units: { spear: 400 } },   // Reste, die für Dual/Flex nicht mehr reichen
+    { name: 'Schwert 400', active: true, units: { sword: 400 } }
   ];
+  // frühere Standardvorlagen, um sie beim Laden durch die neuen zu ersetzen
+  const OLD_DEFAULT_PRESETS = [
+    [['Dual 200', { spear: 200, sword: 200 }], ['Flex 300/100', { spear: 300, heavy: 100 }], ['SKav 100', { heavy: 100 }]],
+    [['Dual SD 200', { spear: 200, sword: 200 }], ['Flex 300/100', { spear: 300, heavy: 100 }], ['SKav 100', { heavy: 100 }]]
+  ];
+  function isOldDefault(presets) {
+    const norm = u => JSON.stringify(Object.keys(u).filter(k => u[k] > 0).sort().map(k => [k, u[k]]));
+    return OLD_DEFAULT_PRESETS.some(old => Array.isArray(presets) && presets.length === old.length &&
+      presets.every((p, i) => p.name === old[i][0] && norm(p.units || {}) === norm(old[i][1])));
+  }
 
   const DEFAULT_SETTINGS = {
     world: 'de258',
@@ -485,6 +506,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     // Limits
     reservePct: 0, maxPerVillage: 0, maxTotal: 0, maxTravelH: 0, leadMin: 2,
     excludeAttacked: false,
+    tempoUnits: ['spear', 'archer', 'sword', 'catapult'], // je 1 davon darf ein Paket langsamer machen
     skipBunker: true,      // Dörfer mit viel Fremddeff nicht tabben
     bunkerMin: 3000,       // ab so vielen fremden Deff-Einheiten (Speer+Schwert+SKav) gilt ein Dorf als Bunker
     windows: [],           // [{from: ms, to: ms}] (ältere Form {start:'20:45', end:'01:00'} = täglich)
@@ -902,19 +924,40 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
 
     // Kandidatenkanten
     const open = slots.filter(sl => sl.valid && !sl.existing && sl.arrival > now && !bunkers.has(sl.target));
+    // Tempo-Varianten: Ein Paket darf mit 1 langsameren Einheit laufen (z. B. 1 Kata), wenn das Dorf davon
+    // nach der Paketbildung genug übrig hat, um jedes seiner Pakete so zu verschicken.
+    const tempoUnits = (s.tempoUnits || []).filter(k => s.speeds[k]);
+    const restOf = {}, pkgCount = {};
+    pk.perVillage.forEach(p => { restOf[p.coord] = p.rest; pkgCount[p.coord] = p.counts.reduce((a, b) => a + b, 0); });
+    pk.groups.forEach(g => {
+      g.variants = [{ units: g.units, slow: g.slow, extra: null }];
+      const seen = new Set([s.speeds[g.slow]]);
+      for (const u of tempoUnits) {
+        const sp = s.speeds[u];
+        if (!(sp > s.speeds[g.slow]) || seen.has(sp)) continue;
+        if (((restOf[g.coord] || {})[u] || 0) < pkgCount[g.coord]) continue;
+        seen.add(sp);
+        const units = Object.assign({}, g.units); units[u] = (units[u] || 0) + 1;
+        g.variants.push({ units, slow: u, extra: u });
+      }
+    });
     const edges = [];
     const feasibleCount = new Map();
     open.forEach((sl, j) => {
       pk.groups.forEach((g, i) => {
         if (g.coord === sl.target) return;
-        const tsec = travelSec(g, sl, g.slow, s);
-        if (s.maxTravelH > 0 && tsec > s.maxTravelH * 3600) return;
-        const send = sl.arrival - tsec * 1000;
-        if (send < now + s.leadMin * 60000) return;
-        if (!inWindows(send, s.windows, s.windowBufferMin)) { sl.windowBlocked = true; return; }
-        // kleiner Bonus für kürzere Laufzeit (präziser, weniger lang gebunden)
-        edges.push({ g: i, l: j, w: sl.score - tsec / 1e6, tsec, send });
-        feasibleCount.set(sl.id, (feasibleCount.get(sl.id) || 0) + 1);
+        let ok = false;
+        g.variants.forEach((v, vi) => {
+          const tsec = travelSec(g, sl, v.slow, s);
+          if (s.maxTravelH > 0 && tsec > s.maxTravelH * 3600) return;
+          const send = sl.arrival - tsec * 1000;
+          if (send < now + s.leadMin * 60000) return;
+          if (!inWindows(send, s.windows, s.windowBufferMin)) { sl.windowBlocked = true; return; }
+          // kleiner Bonus für kürzere Laufzeit (präziser, weniger lang gebunden), Grundpaket leicht bevorzugt
+          edges.push({ g: i, l: j, v: vi, w: sl.score - tsec / 1e6 - vi * 1e-7, tsec, send });
+          ok = true;
+        });
+        if (ok) feasibleCount.set(sl.id, (feasibleCount.get(sl.id) || 0) + 1);
       });
     });
     open.forEach(sl => sl.candidates = feasibleCount.get(sl.id) || 0);
@@ -929,7 +972,9 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     const tabs = res.chosen.map(e => {
       const g = pk.groups[e.g], sl = open[e.l];
       sl.tab = true;
-      return { slot: sl, group: g, src: g.coord, tgt: sl.target, arrival: sl.arrival, send: e.send, tsec: e.tsec, units: g.units, slow: g.slow, preset: g.preset, score: sl.score };
+      const v = g.variants[e.v || 0];
+      return { slot: sl, group: g, src: g.coord, tgt: sl.target, arrival: sl.arrival, send: e.send, tsec: e.tsec, units: v.units, slow: v.slow, extra: v.extra,
+        preset: v.extra ? `${g.preset} +1 ${UNIT_LABELS[v.extra]}` : g.preset, score: sl.score };
     }).sort((a, b) => a.send - b.send);
 
     const usedPerGroup = {};
@@ -991,7 +1036,7 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     return lines.join('\n');
   }
 
-  const API = { UNITS, ALL, UNIT_LABELS, DEF_VALUE, BASE_SPEED, DEFAULT_PRESETS, DEFAULT_SETTINGS, parseSOS, parseTroops, parseVillageIds, parsePlan, parseOutgoing, parseThreats, parseUnitInfo, buildPackages, computeSlots, scoreSlot, solve, plan, exportDS, exportFullBB, exportOpenBB, exportPackages, placeUrl, travelSec, inWindows, fmtTime, fmtDur, unitsText };
+  const API = { UNITS, ALL, UNIT_LABELS, DEF_VALUE, BASE_SPEED, DEFAULT_PRESETS, isOldDefault, slowestUnit, DEFAULT_SETTINGS, parseSOS, parseTroops, parseVillageIds, parsePlan, parseOutgoing, parseThreats, parseUnitInfo, buildPackages, computeSlots, scoreSlot, solve, plan, exportDS, exportFullBB, exportOpenBB, exportPackages, placeUrl, travelSec, inWindows, fmtTime, fmtDur, unitsText };
   root.TPEngine = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1012,14 +1057,14 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   let worlds = null, result = null, idText = '', idSource = '', recalcT = null, timer = null, sent = {};
   const cols = ()=> (state.settings.units && state.settings.units.length) ? state.settings.units : E.UNITS;
   // In Paketen sinnvolle Einheiten: Deff plus Ramme als langsamer Zeitfüller
-  const pkUnits = ()=> cols().filter(k=> ['spear','sword','archer','spy','heavy','ram'].includes(k));
+  const pkUnits = ()=> cols().filter(k=> ['spear','sword','archer','heavy','catapult'].includes(k) || state.presets.some(p=> (p.units[k]||0) > 0 && ['spy','ram'].includes(k)));
 
   // Bis 17.10.2026 wurden falsche DS-Ultimate-Typen gespeichert (6 = Icon Berittener Bogenschütze statt Stand Unterstützung)
   function fixType(st){ if(st && st.typeVer == null){ const m = {5:0, 6:1, 7:7, 8:46}; st.typeCode = m[st.typeCode] ?? 1; st.typeVer = 2; } return st; }
   function load(){ try{ const d = JSON.parse(localStorage.getItem(STORE)||'null'); if(d){
       fixType(d.settings);
       if(d.settings) state.settings = Object.assign(state.settings, d.settings, {unitWeights:Object.assign({}, state.settings.unitWeights, d.settings.unitWeights||{}), speeds:Object.assign({}, state.settings.speeds, d.settings.speeds||{})});
-      if(Array.isArray(d.presets) && d.presets.length) state.presets = d.presets; }
+      if(Array.isArray(d.presets) && d.presets.length) state.presets = E.isOldDefault(d.presets) ? JSON.parse(JSON.stringify(E.DEFAULT_PRESETS)) : d.presets; }
       sent = JSON.parse(localStorage.getItem(SENT)||'{}') || {}; }catch(e){} }
   function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){} }
   function saveSent(){
@@ -1130,19 +1175,36 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
   });
 
   // ---------- Pakete ----------
+  // Tempo eines Pakets: langsamste Einheit und Minuten pro Feld auf der gewählten Welt
+  function tempo(units){
+    const k = E.slowestUnit(units, state.settings.speeds); if(!k) return '–';
+    const m = state.settings.speeds[k] / ((state.settings.unitSpeed||1) * (state.settings.worldSpeed||1));
+    return `${img(k)}${nf(Math.round(m*10)/10)}′`;
+  }
+  function renderTempo(){
+    const box = $('tempoUnits'), on = new Set(state.settings.tempoUnits || []);
+    box.innerHTML = cols().filter(k=> ['spear','archer','sword','catapult'].includes(k)).map(k=>
+      `<label class="check" for="tu_${k}"><input type="checkbox" id="tu_${k}" data-tu="${k}" ${on.has(k)?'checked':''}>${L[k]}</label>`).join('');
+    box.querySelectorAll('[data-tu]').forEach(cb=> cb.addEventListener('change', ()=>{
+      state.settings.tempoUnits = [...box.querySelectorAll('[data-tu]:checked')].map(x=> x.dataset.tu);
+      save(); schedule();
+    }));
+  }
   function renderPresets(){
+    renderTempo();
     const U = pkUnits(), t = $('presetTable');
-    t.innerHTML = `<thead><tr><th title="aktiv"></th><th style="text-align:left">Name</th>${U.map(k=>`<th>${img(k)}</th>`).join('')}<th></th></tr></thead><tbody>` +
+    t.innerHTML = `<thead><tr><th title="wird mitgerechnet">An</th><th style="text-align:left">Name</th>${U.map(k=>`<th>${img(k)}</th>`).join('')}<th title="langsamste Einheit, Minuten pro Feld">Tempo</th><th></th></tr></thead><tbody>` +
       state.presets.map((p,i)=>`<tr class="${p.active===false?'off':''}">
         <td><input type="checkbox" id="pa${i}" ${p.active!==false?'checked':''} aria-label="Paket ${esc(p.name)} aktiv"></td>
         <td><input type="text" id="pn${i}" value="${esc(p.name)}" aria-label="Paketname"></td>
         ${U.map(k=>`<td><input type="number" min="0" step="10" id="pu${i}_${k}" data-u="${k}" value="${p.units[k]||0}" aria-label="${L[k]} in ${esc(p.name)}"></td>`).join('')}
+        <td class="tempo" title="Minuten pro Feld">${tempo(p.units)}</td>
         <td class="tools"><button type="button" class="ghost" data-a="up" title="nach oben (höhere Priorität)" aria-label="nach oben" ${i===0?'disabled':''}>↑</button><button type="button" class="ghost" data-a="del" title="Paket löschen" aria-label="Paket löschen">✕</button></td></tr>`).join('') + '</tbody>';
     t.querySelectorAll('tbody tr').forEach((tr,i)=>{
       const p = state.presets[i];
       tr.querySelector(`#pa${i}`).addEventListener('change', e=>{ p.active = e.target.checked; tr.classList.toggle('off', !p.active); save(); schedule(); });
       tr.querySelector(`#pn${i}`).addEventListener('input', e=>{ p.name = e.target.value || 'Paket'; save(); schedule(); });
-      tr.querySelectorAll('[data-u]').forEach(inp=> inp.addEventListener('input', ()=>{ p.units[inp.dataset.u] = parseInt(inp.value,10)||0; save(); schedule(); }));
+      tr.querySelectorAll('[data-u]').forEach(inp=> inp.addEventListener('input', ()=>{ p.units[inp.dataset.u] = parseInt(inp.value,10)||0; tr.querySelector('.tempo').innerHTML = tempo(p.units); save(); schedule(); }));
       tr.querySelectorAll('[data-a]').forEach(b=> b.addEventListener('click', ()=>{
         const a = b.dataset.a;
         if(a==='del') state.presets.splice(i,1);
@@ -1153,6 +1215,8 @@ a.go{display:inline-block; text-decoration:none; font-weight:700; font-size:.8re
     });
   }
   $('btnAddPreset').addEventListener('click', ()=>{ state.presets.push({name:'Neues Paket', active:true, units:{spear:100}}); save(); renderPresets(); schedule(); });
+  $('btnPkAll').addEventListener('click', ()=>{ state.presets.forEach(p=> p.active = true); save(); renderPresets(); schedule(); });
+  $('btnPkNone').addEventListener('click', ()=>{ state.presets.forEach(p=> p.active = false); save(); renderPresets(); schedule(); });
   $('btnResetPresets').addEventListener('click', ()=>{ state.presets = JSON.parse(JSON.stringify(E.DEFAULT_PRESETS)); save(); renderPresets(); schedule(); });
 
   // ---------- Welt & Dorf-IDs ----------
