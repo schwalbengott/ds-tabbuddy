@@ -50,8 +50,8 @@
     "knight": 325.0,
     "snob": 75.0
    },
-   "villages": 38560,
-   "updated": "2026-11-03T07:00:59Z"
+   "villages": 39048,
+   "updated": "2026-11-03T19:40:01Z"
   },
   {
    "id": "de260",
@@ -94,8 +94,8 @@
     "catapult": 75.0,
     "snob": 75.0
    },
-   "villages": 12570,
-   "updated": "2026-11-03T07:00:55Z"
+   "villages": 12724,
+   "updated": "2026-11-03T19:39:56Z"
   },
   {
    "id": "de259",
@@ -147,8 +147,8 @@
     "knight": 325.0,
     "snob": 75.0
    },
-   "villages": 47882,
-   "updated": "2026-11-03T07:00:50Z"
+   "villages": 47962,
+   "updated": "2026-11-03T19:39:52Z"
   },
   {
    "id": "de258",
@@ -191,8 +191,8 @@
     "catapult": 75.0,
     "snob": 75.0
    },
-   "villages": 25190,
-   "updated": "2026-11-03T07:00:46Z"
+   "villages": 25228,
+   "updated": "2026-11-03T19:39:48Z"
   },
   {
    "id": "de257",
@@ -238,8 +238,8 @@
     "knight": 325.0,
     "snob": 75.0
    },
-   "villages": 63374,
-   "updated": "2026-11-03T07:00:41Z"
+   "villages": 63396,
+   "updated": "2026-11-03T19:39:43Z"
   },
   {
    "id": "de256",
@@ -288,61 +288,8 @@
     "catapult": 75.0,
     "snob": 75.0
    },
-   "villages": 24757,
-   "updated": "2026-11-03T07:00:37Z"
-  },
-  {
-   "id": "de255",
-   "url": "https://de255.die-staemme.de",
-   "speed": 1.6,
-   "unitSpeed": 0.625,
-   "millis": true,
-   "archer": true,
-   "knight": true,
-   "units": [
-    "spear",
-    "sword",
-    "axe",
-    "archer",
-    "spy",
-    "light",
-    "marcher",
-    "heavy",
-    "ram",
-    "catapult",
-    "knight",
-    "snob"
-   ],
-   "speeds": {
-    "spear": 18.0,
-    "sword": 22.0,
-    "axe": 18.0,
-    "archer": 18.0,
-    "spy": 9.0,
-    "light": 10.0,
-    "marcher": 10.0,
-    "heavy": 11.0,
-    "ram": 30.0,
-    "catapult": 30.0,
-    "knight": 10.0,
-    "snob": 35.0
-   },
-   "def": {
-    "spear": 30.0,
-    "sword": 32.5,
-    "axe": 7.5,
-    "archer": 45.0,
-    "spy": 1.5,
-    "light": 35.0,
-    "marcher": 35.0,
-    "heavy": 140.0,
-    "ram": 35.0,
-    "catapult": 75.0,
-    "knight": 325.0,
-    "snob": 75.0
-   },
-   "villages": 58834,
-   "updated": "2026-11-03T07:00:32Z"
+   "villages": 24781,
+   "updated": "2026-11-03T19:39:39Z"
   },
   {
    "id": "de254",
@@ -386,7 +333,7 @@
     "snob": 75.0
    },
    "villages": 26593,
-   "updated": "2026-11-03T07:00:28Z"
+   "updated": "2026-11-03T19:39:35Z"
   },
   {
    "id": "de253",
@@ -432,8 +379,8 @@
     "knight": 325.0,
     "snob": 75.0
    },
-   "villages": 57013,
-   "updated": "2026-11-03T07:00:23Z"
+   "villages": 57015,
+   "updated": "2026-11-03T19:39:30Z"
   },
   {
    "id": "dec5",
@@ -485,8 +432,8 @@
     "knight": 325.0,
     "snob": 75.0
    },
-   "villages": 45983,
-   "updated": "2026-11-03T07:01:13Z"
+   "villages": 46039,
+   "updated": "2026-11-03T19:40:13Z"
   },
   {
    "id": "dec4",
@@ -538,8 +485,8 @@
     "knight": 325.0,
     "snob": 75.0
    },
-   "villages": 52320,
-   "updated": "2026-11-03T07:01:08Z"
+   "villages": 52324,
+   "updated": "2026-11-03T19:40:09Z"
   },
   {
    "id": "dec1",
@@ -585,8 +532,8 @@
     "knight": 325.0,
     "snob": 75.0
    },
-   "villages": 6536,
-   "updated": "2026-11-03T07:01:04Z"
+   "villages": 6575,
+   "updated": "2026-11-03T19:40:05Z"
   },
   {
    "id": "dep21",
@@ -638,8 +585,8 @@
     "knight": 325.0,
     "snob": 75.0
    },
-   "villages": 32878,
-   "updated": "2026-11-03T07:01:22Z"
+   "villages": 33005,
+   "updated": "2026-11-03T19:40:22Z"
   },
   {
    "id": "dep20",
@@ -692,7 +639,7 @@
     "snob": 75.0
    },
    "villages": 51788,
-   "updated": "2026-11-03T07:01:18Z"
+   "updated": "2026-11-03T19:40:18Z"
   }
  ]
 }
